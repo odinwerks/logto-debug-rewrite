@@ -13,7 +13,7 @@ const CopyIcon = () => (
 
 interface CodeBlockProps {
   title: string;
-  data: any;
+  data: unknown;
   themeColors: ThemeColors;
   maxHeight?: string;
   copyKey?: string;

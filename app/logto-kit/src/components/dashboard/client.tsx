@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { IBM_Plex_Mono } from 'next/font/google';
-import type { DashboardData, TabId, ToastMessage } from './types';
+import type { DashboardData, TabId, ToastMessage, UserData, MfaVerificationPayload } from './types';
 import type { ThemeColors } from '../../themes';
 import type { Translations } from '../../locales';
 import { darkColors, lightColors } from '../../themes';
@@ -39,7 +39,7 @@ interface DashboardClientProps {
   onRemovePhone: (identityVerificationRecordId: string) => Promise<void>;
   onGetMfaVerifications: () => Promise<Array<MfaVerification>>;
   onGenerateTotpSecret: () => Promise<{ secret: string; secretQrCode: string }>;
-  onAddMfaVerification: (type: string, payload: any, identityVerificationRecordId: string) => Promise<void>;
+  onAddMfaVerification: (verification: MfaVerificationPayload, identityVerificationRecordId: string) => Promise<void>;
   onDeleteMfaVerification: (verificationId: string, identityVerificationRecordId: string) => Promise<void>;
   onGenerateBackupCodes: (identityVerificationRecordId: string) => Promise<{ codes: string[] }>;
   onGetBackupCodes: (identityVerificationRecordId: string) => Promise<{ codes: Array<{ code: string; usedAt: string | null }> }>;

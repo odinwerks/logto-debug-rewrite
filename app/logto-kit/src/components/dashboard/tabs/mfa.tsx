@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import type { UserData, MfaVerification } from '../../../logic/types';
+import type { UserData, MfaVerification, MfaVerificationPayload } from '../../../logic/types';
 import type { ThemeColors } from '../../../themes';
 import type { Translations } from '../../../locales';
 
@@ -13,8 +13,7 @@ interface MfaTabProps {
   onGetMfaVerifications: () => Promise<MfaVerification[]>;
   onGenerateTotpSecret: () => Promise<{ secret: string; secretQrCode: string }>;
   onAddMfaVerification: (
-    type: string,
-    payload: { secret: string; code: string } | Record<string, unknown>,
+    verification: MfaVerificationPayload,
     identityVerificationRecordId: string
   ) => Promise<void>;
   onDeleteMfaVerification: (verificationId: string, identityVerificationRecordId: string) => Promise<void>;
@@ -162,8 +161,7 @@ export function MfaTab({
     setMfaLoading(true);
     try {
       await onAddMfaVerification(
-        'Totp',
-        { secret: totpSecret.secret, code: totpVerificationCode },
+        { type: 'Totp', payload: { secret: totpSecret.secret, code: totpVerificationCode } },
         mfaVerificationState.verificationId
       );
       onSuccess('TOTP enrolled successfully');

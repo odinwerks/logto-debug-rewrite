@@ -2,18 +2,19 @@
 
 import { getAccessToken, getLogtoContext } from '@logto/next/server-actions';
 import { logtoConfig } from '../../../logto';
-import type { DashboardResult, DashboardSuccess, UserData, MfaVerification } from './types';
+import type { DashboardResult, DashboardSuccess, UserData, MfaVerification, MfaType, MfaVerificationPayload } from './types';
 
 // ============================================================================
 // Environment Configuration
 // ============================================================================
 
 function getCleanEndpoint(): string {
-  const endpoint = process.env.ENDPOINT;
+  // Use the already validated and trimmed endpoint from logtoConfig
+  const endpoint = logtoConfig.endpoint;
   if (!endpoint) {
     throw new Error(
-      'ENDPOINT environment variable is missing! ' +
-        'Set it in your .env.local file: ENDPOINT=https://auth.yourdomain.org'
+      'ENDPOINT configuration is missing! ' +
+        'Check your .env file and logto.ts configuration.'
     );
   }
   return endpoint.replace(/\/$/, '');
@@ -30,6 +31,35 @@ async function getTokenForServerAction(): Promise<string> {
 }
 
 // ============================================================================
+// Request Helper
+// ============================================================================
+
+async function makeRequest(
+  path: string,
+  options: {
+    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT';
+    body?: unknown;
+    extraHeaders?: Record<string, string>;
+  } = {}
+): Promise<Response> {
+  const token = await getTokenForServerAction();
+  const cleanEndpoint = getCleanEndpoint();
+  const url = `${cleanEndpoint}${path.startsWith('/') ? '' : '/'}${path}`;
+  
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+    ...options.extraHeaders,
+  };
+  
+  return fetch(url, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+}
+
+// ============================================================================
 // Dashboard Data Fetching (Used in RSC)
 // ============================================================================
 
@@ -41,10 +71,7 @@ export async function fetchDashboardData(): Promise<DashboardResult> {
     }
 
     const token = await getTokenForServerAction();
-    const cleanEndpoint = getCleanEndpoint();
-    const res = await fetch(`${cleanEndpoint}/api/my-account`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await makeRequest('/api/my-account');
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -85,29 +112,20 @@ export async function updateUserBasicInfo(updates: {
   username?: string;
   avatar?: string;
 }): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account`;
-
   const cleanUpdates = Object.fromEntries(
     Object.entries(updates).filter(([_, v]) => v !== undefined && v !== '')
   );
 
   if (Object.keys(cleanUpdates).length === 0) return;
 
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account', {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(cleanUpdates),
+    body: cleanUpdates,
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Basic info update failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Basic info update failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
@@ -115,65 +133,38 @@ export async function updateUserProfile(profile: {
   givenName?: string;
   familyName?: string;
 }): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/profile`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account/profile', {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(profile),
+    body: profile,
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Profile update failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Profile update failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
 export async function updateUserCustomData(customData: Record<string, unknown>): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account', {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ customData }),
+    body: { customData },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Custom data update failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Custom data update failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
 export async function updateAvatarUrl(avatarUrl: string): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account', {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ avatar: avatarUrl }),
+    body: { avatar: avatarUrl },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Avatar update failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Avatar update failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
@@ -182,90 +173,59 @@ export async function updateAvatarUrl(avatarUrl: string): Promise<void> {
 // ============================================================================
 
 export async function verifyPasswordForIdentity(password: string): Promise<{ verificationRecordId: string }> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/verifications/password`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/verifications/password', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ password }),
+    body: { password },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Password verification failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Password verification failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
-
-  const parsed = JSON.parse(responseText);
+  
+  const parsed = await res.json();
   if (!parsed.verificationRecordId) {
     throw new Error(`API didn't return verificationRecordId. Got: ${JSON.stringify(parsed)}`);
   }
-
+  
   return { verificationRecordId: parsed.verificationRecordId };
 }
 
 export async function sendEmailVerificationCode(email: string): Promise<{ verificationId: string }> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/verifications/verification-code`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/verifications/verification-code', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      identifier: { type: 'email', value: email },
-    }),
+    body: { identifier: { type: 'email', value: email } },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Email verification send failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Email verification send failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
-
-  const parsed = JSON.parse(responseText);
+  
+  const parsed = await res.json();
   if (!parsed.verificationRecordId) {
     throw new Error(`API didn't return verificationRecordId. Got: ${JSON.stringify(parsed)}`);
   }
-
+  
   return { verificationId: parsed.verificationRecordId };
 }
 
 export async function sendPhoneVerificationCode(phone: string): Promise<{ verificationId: string }> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/verifications/verification-code`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/verifications/verification-code', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      identifier: { type: 'phone', value: phone },
-    }),
+    body: { identifier: { type: 'phone', value: phone } },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Phone verification send failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Phone verification send failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
-
-  const parsed = JSON.parse(responseText);
+  
+  const parsed = await res.json();
   if (!parsed.verificationRecordId) {
     throw new Error(`API didn't return verificationRecordId. Got: ${JSON.stringify(parsed)}`);
   }
-
+  
   return { verificationId: parsed.verificationRecordId };
 }
 
@@ -275,34 +235,21 @@ export async function verifyVerificationCode(
   verificationId: string,
   code: string
 ): Promise<{ verificationRecordId: string }> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/verifications/verification-code/verify`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/verifications/verification-code/verify', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      identifier: { type, value },
-      verificationId,
-      code,
-    }),
+    body: { identifier: { type, value }, verificationId, code },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Verification failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Verification failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
-
-  const parsed = JSON.parse(responseText);
+  
+  const parsed = await res.json();
   if (!parsed.verificationRecordId) {
     throw new Error(`API didn't return verificationRecordId. Got: ${JSON.stringify(parsed)}`);
   }
-
+  
   return { verificationRecordId: parsed.verificationRecordId };
 }
 
@@ -315,27 +262,15 @@ export async function updateEmailWithVerification(
   newIdentifierVerificationRecordId: string,
   identityVerificationRecordId: string
 ): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/primary-email`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account/primary-email', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'logto-verification-id': identityVerificationRecordId,
-    },
-    body: JSON.stringify({
-      email,
-      newIdentifierVerificationRecordId,
-    }),
+    body: { email, newIdentifierVerificationRecordId },
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Email update failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Email update failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
@@ -344,67 +279,39 @@ export async function updatePhoneWithVerification(
   newIdentifierVerificationRecordId: string,
   identityVerificationRecordId: string
 ): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/primary-phone`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account/primary-phone', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'logto-verification-id': identityVerificationRecordId,
-    },
-    body: JSON.stringify({
-      phone,
-      newIdentifierVerificationRecordId,
-    }),
+    body: { phone, newIdentifierVerificationRecordId },
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
-  const responseText = await res.text();
-
+  
   if (!res.ok) {
-    throw new Error(`Phone update failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Phone update failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
 export async function removeUserEmail(identityVerificationRecordId: string): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/primary-email`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account/primary-email', {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'logto-verification-id': identityVerificationRecordId,
-    },
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
-  const responseText = await res.text();
+  
   if (!res.ok) {
-    throw new Error(`Email removal failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Email removal failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
 export async function removeUserPhone(identityVerificationRecordId: string): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/primary-phone`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account/primary-phone', {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'logto-verification-id': identityVerificationRecordId,
-    },
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
-  const responseText = await res.text();
+  
   if (!res.ok) {
-    throw new Error(`Phone removal failed ${res.status}: ${responseText.substring(0, 200)}`);
+    const errorText = await res.text();
+    throw new Error(`Phone removal failed ${res.status}: ${errorText.substring(0, 200)}`);
   }
 }
 
@@ -413,16 +320,8 @@ export async function removeUserPhone(identityVerificationRecordId: string): Pro
 // ============================================================================
 
 export async function getMfaVerifications(): Promise<MfaVerification[]> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/mfa-verifications`;
-
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
+  const res = await makeRequest('/api/my-account/mfa-verifications');
+  
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Get MFA verifications failed ${res.status}: ${errorText.substring(0, 200)}`);
@@ -432,18 +331,10 @@ export async function getMfaVerifications(): Promise<MfaVerification[]> {
 }
 
 export async function generateTotpSecret(): Promise<{ secret: string; secretQrCode: string }> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/mfa-verifications/totp-secret/generate`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account/mfa-verifications/totp-secret/generate', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
   });
-
+  
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Generate TOTP secret failed ${res.status}: ${errorText.substring(0, 200)}`);
@@ -453,24 +344,16 @@ export async function generateTotpSecret(): Promise<{ secret: string; secretQrCo
 }
 
 export async function addMfaVerification(
-  type: string,
-  payload: { secret: string; code: string } | Record<string, unknown>,
+  verification: MfaVerificationPayload,
   identityVerificationRecordId: string
 ): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/mfa-verifications`;
-
-  const res = await fetch(url, {
+  const { type, payload } = verification;
+  const res = await makeRequest('/api/my-account/mfa-verifications', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'logto-verification-id': identityVerificationRecordId,
-    },
-    body: JSON.stringify({ type, ...payload }),
+    body: { type, ...payload },
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
+  
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Add MFA verification failed ${res.status}: ${errorText.substring(0, 200)}`);
@@ -481,19 +364,11 @@ export async function deleteMfaVerification(
   verificationId: string,
   identityVerificationRecordId: string
 ): Promise<void> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/mfa-verifications/${verificationId}`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest(`/api/my-account/mfa-verifications/${verificationId}`, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'logto-verification-id': identityVerificationRecordId,
-    },
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
+  
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Delete MFA verification failed ${res.status}: ${errorText.substring(0, 200)}`);
@@ -501,19 +376,11 @@ export async function deleteMfaVerification(
 }
 
 export async function generateBackupCodes(identityVerificationRecordId: string): Promise<{ codes: string[] }> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/mfa-verifications/backup-codes/generate`;
-
-  const res = await fetch(url, {
+  const res = await makeRequest('/api/my-account/mfa-verifications/backup-codes/generate', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'logto-verification-id': identityVerificationRecordId,
-    },
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
+  
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Generate backup codes failed ${res.status}: ${errorText.substring(0, 200)}`);
@@ -525,17 +392,10 @@ export async function generateBackupCodes(identityVerificationRecordId: string):
 export async function getBackupCodes(
   identityVerificationRecordId: string
 ): Promise<{ codes: Array<{ code: string; usedAt: string | null }> }> {
-  const token = await getTokenForServerAction();
-  const cleanEndpoint = getCleanEndpoint();
-  const url = `${cleanEndpoint}/api/my-account/mfa-verifications/backup-codes`;
-
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'logto-verification-id': identityVerificationRecordId,
-    },
+  const res = await makeRequest('/api/my-account/mfa-verifications/backup-codes', {
+    extraHeaders: { 'logto-verification-id': identityVerificationRecordId },
   });
-
+  
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Get backup codes failed ${res.status}: ${errorText.substring(0, 200)}`);

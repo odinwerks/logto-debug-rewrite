@@ -1,4 +1,4 @@
-import type { UserData, MfaVerification } from '../../logic/types';
+import type { UserData, MfaVerification, MfaVerificationPayload } from '../../logic/types';
 import type { ThemeColors } from '../../themes';
 import type { Translations } from '../../locales';
 
@@ -34,4 +34,4 @@ export interface DashboardContext {
 }
 
 // Re-export for convenience
-export type { UserData, MfaVerification, ThemeColors, Translations };
+export type { UserData, MfaVerification, MfaVerificationPayload, ThemeColors, Translations };
