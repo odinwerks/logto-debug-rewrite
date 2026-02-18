@@ -156,3 +156,5 @@ npm run build
 ## License
 
 MIT
+
+> **Disclaimer**: If you cause the decadence of Earth running this horrid code, I am not liable. Also take care <3
