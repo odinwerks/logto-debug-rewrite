@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { IBM_Plex_Mono } from 'next/font/google';
 import type { DashboardData, TabId, ToastMessage, UserData, MfaVerificationPayload } from './types';
 import type { ThemeColors } from '../../themes';
@@ -14,6 +14,10 @@ import { MfaTab } from './tabs/mfa';
 import { IdentitiesTab } from './tabs/identities';
 import { OrganizationsTab } from './tabs/organizations';
 import { RawDataTab } from './tabs/raw-data';
+import { getPreferencesFromUserData, buildUpdatedCustomData } from '../../logic/preferences';
+
+// Import MfaVerification type
+import type { MfaVerification } from '../../logic/types';
 
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ['latin'],
@@ -21,10 +25,42 @@ const ibmPlexMono = IBM_Plex_Mono({
   variable: '--font-ibm-plex-mono',
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab metadata (labels come from translations, so this only holds the ID)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TAB_ICON = '›';
+
+function getTabLabel(id: TabId, t: Translations): string {
+  switch (id) {
+    case 'profile': return t.tabs.profile;
+    case 'custom-data': return t.tabs.customData;
+    case 'identities': return t.tabs.identities;
+    case 'organizations': return t.tabs.organizations;
+    case 'mfa': return t.tabs.mfa;
+    case 'raw': return t.tabs.raw;
+    default: return (id as string).toUpperCase();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Props
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface DashboardClientProps {
   initialData: DashboardData;
   translations: Translations;
+  /** All translations keyed by locale code, for client-side lang switching */
+  allTranslations: Record<string, Translations>;
+  /** Ordered list of supported language codes from ENV */
+  supportedLangs: string[];
+  /** Current default language code from ENV */
+  initialLang: string;
+  /** Ordered list of tab IDs to display from ENV */
+  loadedTabs: TabId[];
+  /** Default theme mode from ENV */
   initialTheme?: 'dark' | 'light';
+
   onUpdateBasicInfo: (updates: { name?: string; username?: string }) => Promise<void>;
   onUpdateAvatarUrl: (avatarUrl: string) => Promise<void>;
   onUpdateProfile: (profile: { givenName?: string; familyName?: string }) => Promise<void>;
@@ -47,9 +83,17 @@ interface DashboardClientProps {
   onRefresh: () => Promise<{ success: boolean; redirect?: string }>;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function DashboardClient({
   initialData,
-  translations: t,
+  translations: serverTranslations,
+  allTranslations,
+  supportedLangs,
+  initialLang,
+  loadedTabs,
   initialTheme = 'dark',
   onUpdateBasicInfo,
   onUpdateAvatarUrl,
@@ -72,31 +116,32 @@ export function DashboardClient({
   onSignOut,
   onRefresh,
 }: DashboardClientProps) {
-  // Theme state
+
+  // ── Theme ──────────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState<'dark' | 'light'>(initialTheme);
-  const themeColors = useMemo(() => (theme === 'dark' ? darkColors : lightColors), [theme]);
+  const themeColors = useMemo<ThemeColors>(() => (theme === 'dark' ? darkColors : lightColors), [theme]);
 
-  // Load saved theme on mount
+  // ── Language ───────────────────────────────────────────────────────────────
+  const [lang, setLang] = useState<string>(initialLang);
+  const t = useMemo<Translations>(
+    () => allTranslations[lang] ?? serverTranslations,
+    [lang, allTranslations, serverTranslations]
+  );
+
+  // ── User Data ──────────────────────────────────────────────────────────────
+  const [userData, setUserData] = useState<UserData>(initialData.userData);
+  const [accessToken, setAccessToken] = useState<string>(initialData.accessToken);
+
+  // Sync local state when parent component provides fresh data
   useEffect(() => {
-    const savedTheme = localStorage.getItem('logto-dashboard-theme') as 'dark' | 'light' | null;
-    if (savedTheme && (savedTheme === 'dark' || savedTheme === 'light')) {
-      setTheme(savedTheme);
-    }
-  }, []);
+    setUserData(initialData.userData);
+    setAccessToken(initialData.accessToken);
+  }, [initialData]);
 
-  // Save theme when changed
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const newTheme = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('logto-dashboard-theme', newTheme);
-      return newTheme;
-    });
-  }, []);
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<TabId>(loadedTabs[0] ?? 'profile');
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<TabId>('profile');
-
-  // Toast notifications
+  // ── Toast ──────────────────────────────────────────────────────────────────
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
@@ -113,30 +158,115 @@ export function DashboardClient({
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Data refresh
+  // ── Refresh ────────────────────────────────────────────────────────────────
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await onRefresh();
-      window.location.reload();
-    } catch (error) {
-      showToast('error', 'Failed to refresh data');
+      // Parent component will re-render with fresh data, updating initialData prop
+    } catch {
+      showToast('error', t.dashboard.refreshFailed);
+    } finally {
       setIsRefreshing(false);
     }
-  }, [onRefresh, showToast]);
+  }, [onRefresh, showToast, t]);
 
-  // Sign out
+  // ── Preferences persistence ────────────────────────────────────────────────
+  // Track whether we've done the initial preference sync
+  const prefSyncedRef = useRef(false);
+
+  // Always-current refs — so persistPreferences never captures stale state.
+  // userDataRef: holds current user data so other keys are preserved on PATCH.
+  // themeRef / langRef: track the latest React state values without closure issues.
+  const userDataRef = useRef(userData);
+  userDataRef.current = userData;
+
+  const themeRef = useRef<'dark' | 'light'>(initialTheme);
+  const langRef = useRef<string>(initialLang);
+  // Sync on every render — before any hooks that read them.
+  themeRef.current = theme;
+  langRef.current = lang;
+
+  /**
+   * Write preferences to Logto customData — fire-and-forget.
+   *
+   * ALWAYS sends the complete { theme, lang } object.
+   * Any field not in `updates` is filled from the current ref value, NOT from
+   * stale userData. This prevents a partial update (only theme, or only lang)
+   * from silently wiping the other preference to its default.
+   */
+  const persistPreferences = useCallback(
+    async (updates: Partial<{ theme: 'dark' | 'light'; lang: string }>) => {
+      const complete = {
+        theme: updates.theme ?? themeRef.current,
+        lang:  updates.lang  ?? langRef.current,
+      };
+      try {
+        const updated = buildUpdatedCustomData(userDataRef.current, complete);
+        await onUpdateCustomData(updated);
+      } catch (err) {
+        console.error('[preferences] Failed to persist:', err);
+      }
+    },
+    [onUpdateCustomData]
+  );
+
+  // ── Mount: read preferences from customData ────────────────────────────────
+  useEffect(() => {
+    if (prefSyncedRef.current) return;
+    prefSyncedRef.current = true;
+
+    const prefs = getPreferencesFromUserData(userData);
+
+    if (prefs) {
+      // Apply saved preferences
+      let shouldPersist = false;
+
+      if (prefs.theme && prefs.theme !== initialTheme) {
+        setTheme(prefs.theme);
+      }
+
+      if (prefs.lang && supportedLangs.includes(prefs.lang) && prefs.lang !== initialLang) {
+        setLang(prefs.lang);
+      }
+
+      // If lang in prefs is not in supported list, normalise it
+      if (prefs.lang && !supportedLangs.includes(prefs.lang)) {
+        shouldPersist = true;
+      }
+
+      // If we need to correct stale/invalid prefs, overwrite
+      if (shouldPersist) {
+        persistPreferences({ theme: prefs.theme, lang: supportedLangs[0] });
+      }
+    } else {
+      // No preferences yet — write the current defaults
+      persistPreferences({ theme: initialTheme, lang: initialLang });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Theme toggle ───────────────────────────────────────────────────────────
+  const toggleTheme = useCallback(() => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    persistPreferences({ theme: next });
+  }, [theme, persistPreferences]);
+
+
+
+  // ── Sign out ───────────────────────────────────────────────────────────────
   const handleSignOut = useCallback(async () => {
     try {
       await onSignOut();
-    } catch (error) {
-      showToast('error', 'Sign out failed');
+    } catch {
+      showToast('error', t.dashboard.signOutFailed);
     }
-  }, [onSignOut, showToast]);
+  }, [onSignOut, showToast, t]);
 
-  // Get initials for avatar fallback
+  // ── Helpers ────────────────────────────────────────────────────────────────
   const getInitials = useCallback((data: UserData): string => {
     if (!data) return '?';
     if (data.profile?.givenName && data.profile?.familyName) {
@@ -144,30 +274,21 @@ export function DashboardClient({
     }
     if (data.name) {
       const parts = data.name.split(' ');
-      if (parts.length >= 2) {
-        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-      }
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
       return parts[0][0]?.toUpperCase() || '?';
     }
-    if (data.username) {
-      return data.username[0]?.toUpperCase() || '?';
-    }
+    if (data.username) return data.username[0]?.toUpperCase() || '?';
     return '?';
   }, []);
 
-  // Format date
   const formatDate = useCallback((timestamp?: number | string) => {
-    if (!timestamp) return 'N/A';
+    if (!timestamp) return t.common.notAvailable;
     try {
       let date: Date;
       if (typeof timestamp === 'string') {
         date = new Date(timestamp);
       } else {
-        if (timestamp < 1e12) {
-          date = new Date(timestamp * 1000);
-        } else {
-          date = new Date(timestamp);
-        }
+        date = new Date(timestamp < 1e12 ? timestamp * 1000 : timestamp);
       }
       return date.toLocaleString('en-US', {
         year: 'numeric',
@@ -179,23 +300,19 @@ export function DashboardClient({
         hour12: false,
       });
     } catch {
-      return 'Invalid Date';
+      return t.common.invalidDate;
     }
   }, []);
 
-  // Tabs configuration
-  const tabs: Array<{ id: TabId; label: string; icon: string }> = [
-    { id: 'profile', label: t.tabs.profile, icon: '>' },
-    { id: 'custom-data', label: t.tabs.customData, icon: '>' },
-    { id: 'identities', label: t.tabs.identities, icon: '>' },
-    { id: 'organizations', label: t.tabs.organizations, icon: '>' },
-    { id: 'raw', label: t.tabs.raw, icon: '>' },
-    { id: 'mfa', label: t.tabs.mfa, icon: '>' },
-  ];
-
-  // Determine token type
-  const isJwt = initialData.accessToken.split('.').length === 3;
+  const isJwt = accessToken.split('.').length === 3;
   const tokenPrefix = isJwt ? 'JWT' : 'OPAQUE';
+
+  // ── Multiple langs available? ──────────────────────────────────────────────
+  const hasMultipleLangs = supportedLangs.length > 1;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <div
@@ -212,7 +329,7 @@ export function DashboardClient({
         fontFamily: 'var(--font-ibm-plex-mono)',
       }}
     >
-      {/* Header - Terminal Style */}
+      {/* ── Header ── */}
       <div
         style={{
           background: themeColors.bgSecondary,
@@ -222,7 +339,6 @@ export function DashboardClient({
           overflow: 'hidden',
         }}
       >
-        {/* Terminal prompt line */}
         <div
           style={{
             background: themeColors.bgPrimary,
@@ -238,7 +354,6 @@ export function DashboardClient({
           </span>
         </div>
 
-        {/* Dashboard info line */}
         <div style={{ padding: '14px', background: themeColors.bgPrimary }}>
           <div
             style={{
@@ -253,7 +368,7 @@ export function DashboardClient({
               [{t.dashboard.title} {t.dashboard.version}]
             </span>
             <span style={{ fontSize: '11px', color: themeColors.textTertiary, fontWeight: 'bold' }}>
-              {t.dashboard.session}: {initialData.userData.id.substring(0, 12)}...
+              {t.dashboard.session}: {userData.id.substring(0, 12)}...
             </span>
             {isRefreshing && (
               <span style={{ fontSize: '11px', color: themeColors.accentYellow }}>
@@ -264,7 +379,7 @@ export function DashboardClient({
         </div>
       </div>
 
-      {/* Main Layout - Two Column */}
+      {/* ── Main Layout ── */}
       <div
         style={{
           display: 'grid',
@@ -275,7 +390,7 @@ export function DashboardClient({
           overflow: 'hidden',
         }}
       >
-        {/* Left Sidebar */}
+        {/* ── Left Sidebar ── */}
         <div
           style={{
             border: `1px solid ${themeColors.borderColor}`,
@@ -303,7 +418,7 @@ export function DashboardClient({
             </div>
 
             <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '14px' }}>
-              {/* Initials Avatar */}
+              {/* Initials fallback */}
               <div
                 style={{
                   width: '100px',
@@ -318,69 +433,53 @@ export function DashboardClient({
                   color: themeColors.textTertiary,
                 }}
               >
-                {getInitials(initialData.userData)}
+                {getInitials(userData)}
               </div>
 
-              {/* Actual Avatar */}
+              {/* Actual avatar */}
               <div
                 style={{
                   width: '100px',
                   height: '100px',
                   borderRadius: '50%',
                   border: `2px solid ${themeColors.borderColor}`,
-                  background: initialData.userData.avatar ? 'transparent' : themeColors.bgTertiary,
+                  background: userData.avatar ? 'transparent' : themeColors.bgTertiary,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   overflow: 'hidden',
                 }}
               >
-                {initialData.userData.avatar ? (
+                {userData.avatar ? (
                   <img
-                    src={initialData.userData.avatar}
+                    src={userData.avatar}
                     alt="Avatar"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 ) : (
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      color: themeColors.textTertiary,
-                      textAlign: 'center',
-                      whiteSpace: 'pre-line',
-                    }}
-                  >
+                  <div style={{ fontSize: '14px', color: themeColors.textTertiary, textAlign: 'center', whiteSpace: 'pre-line' }}>
                     {t.sidebar.noAvatar}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Avatar URL display */}
-            <div
-              style={{
-                color: themeColors.textTertiary,
-                fontSize: '10px',
-                wordBreak: 'break-all',
-                marginBottom: '10px',
-                textAlign: 'center',
-              }}
-            >
-              {initialData.userData.avatar
-                ? initialData.userData.avatar.substring(0, 40) + '...'
+            <div style={{ color: themeColors.textTertiary, fontSize: '10px', wordBreak: 'break-all', marginBottom: '10px', textAlign: 'center' }}>
+              {userData.avatar
+                ? userData.avatar.substring(0, 40) + '...'
                 : 'No avatar URL'}
             </div>
           </div>
 
-          {/* Token Card */}
+          {/* Access Token */}
           <div>
             <div style={{ color: themeColors.textTertiary, fontSize: '10px', marginBottom: '6px' }}>
               {tokenPrefix}_{t.sidebar.token}
             </div>
-            <TruncatedToken token={initialData.accessToken} themeColors={themeColors} />
+            <TruncatedToken token={accessToken} themeColors={themeColors} t={t} />
           </div>
 
-          {/* User ID Card */}
+          {/* User ID */}
           <div
             style={{
               padding: '10px',
@@ -392,18 +491,12 @@ export function DashboardClient({
             <div style={{ color: themeColors.textTertiary, fontSize: '10px', marginBottom: '6px' }}>
               {t.sidebar.userId}
             </div>
-            <div
-              style={{
-                color: themeColors.textPrimary,
-                fontSize: '12px',
-                wordBreak: 'break-all',
-              }}
-            >
-              {initialData.userData.id}
+            <div style={{ color: themeColors.textPrimary, fontSize: '12px', wordBreak: 'break-all' }}>
+              {userData.id}
             </div>
           </div>
 
-          {/* Last Login Card */}
+          {/* Last Login */}
           <div
             style={{
               padding: '10px',
@@ -416,11 +509,60 @@ export function DashboardClient({
               {t.sidebar.lastLogin}
             </div>
             <div style={{ color: themeColors.textPrimary, fontSize: '12px' }}>
-              {formatDate(initialData.userData.lastSignInAt)}
+              {formatDate(userData.lastSignInAt)}
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* ── Language List (under last login) ── */}
+          {hasMultipleLangs && (
+            <div
+              style={{
+                padding: '10px',
+                background: themeColors.bgPrimary,
+                border: `1px solid ${themeColors.borderColor}`,
+                borderRadius: '4px',
+              }}
+            >
+              <div style={{ color: themeColors.textTertiary, fontSize: '10px', marginBottom: '8px' }}>
+                {t.dashboard.availableLangs}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {supportedLangs.map((code) => (
+                  <div
+                    key={code}
+                    onClick={() => {
+                      if (code !== lang) {
+                        setLang(code);
+                        persistPreferences({ lang: code });
+                      }
+                    }}
+                    style={{
+                      padding: '5px 8px',
+                      borderRadius: '3px',
+                      fontSize: '11px',
+                      cursor: code !== lang ? 'pointer' : 'default',
+                      background: code === lang ? themeColors.bgTertiary : 'transparent',
+                      color: code === lang ? themeColors.accentGreen : themeColors.textSecondary,
+                      border: `1px solid ${code === lang ? themeColors.accentGreen : 'transparent'}`,
+                      transition: 'all 0.15s',
+                      userSelect: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span style={{ opacity: code === lang ? 1 : 0, fontSize: '9px' }}>●</span>
+                    {code}
+                    {code === lang && (
+                      <span style={{ marginLeft: 'auto', fontSize: '9px', opacity: 0.6 }}>{t.sidebar.active}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Action Buttons ── */}
           <div
             style={{
               padding: '14px',
@@ -428,14 +570,18 @@ export function DashboardClient({
               border: `1px solid ${themeColors.borderColor}`,
               borderRadius: '4px',
               display: 'flex',
-              gap: '10px',
+              gap: '8px',
+              flexWrap: 'wrap',
             }}
           >
+            {/* Theme toggle */}
             <button
               onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               style={{
                 flex: 1,
-                padding: '8px',
+                minWidth: '80px',
+                padding: '8px 6px',
                 background: themeColors.bgTertiary,
                 color: themeColors.textPrimary,
                 border: `1px solid ${themeColors.borderColor}`,
@@ -443,15 +589,21 @@ export function DashboardClient({
                 cursor: 'pointer',
                 fontSize: '11px',
                 fontFamily: 'var(--font-ibm-plex-mono)',
+                whiteSpace: 'nowrap',
               }}
             >
               {theme === 'dark' ? t.sidebar.lightMode : t.sidebar.darkMode}
             </button>
+
+
+
+            {/* Sign out */}
             <button
               onClick={handleSignOut}
               style={{
                 flex: 1,
-                padding: '8px',
+                minWidth: '80px',
+                padding: '8px 6px',
                 background: themeColors.accentRed,
                 color: '#fee2e2',
                 border: `1px solid ${themeColors.accentRed}`,
@@ -459,6 +611,7 @@ export function DashboardClient({
                 cursor: 'pointer',
                 fontSize: '11px',
                 fontFamily: 'var(--font-ibm-plex-mono)',
+                whiteSpace: 'nowrap',
               }}
             >
               {t.dashboard.signOut}
@@ -466,7 +619,7 @@ export function DashboardClient({
           </div>
         </div>
 
-        {/* Right Content Panel */}
+        {/* ── Right Content Panel ── */}
         <div
           style={{
             border: `1px solid ${themeColors.borderColor}`,
@@ -478,45 +631,49 @@ export function DashboardClient({
             flexDirection: 'column',
           }}
         >
-          {/* Tabs */}
+          {/* Tab bar */}
           <div
             style={{
               display: 'flex',
               borderBottom: `1px solid ${themeColors.borderColor}`,
               background: themeColors.bgPrimary,
+              overflowX: 'auto',
             }}
           >
-            {tabs.map((tab) => (
+            {loadedTabs.map((tabId) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                key={tabId}
+                onClick={() => setActiveTab(tabId)}
                 style={{
                   flex: 1,
+                  minWidth: 'fit-content',
                   padding: '10px 12px',
-                  background: activeTab === tab.id ? themeColors.bgSecondary : themeColors.bgPrimary,
-                  color: activeTab === tab.id ? themeColors.textPrimary : themeColors.textTertiary,
+                  background: activeTab === tabId ? themeColors.bgSecondary : themeColors.bgPrimary,
+                  color: activeTab === tabId ? themeColors.textPrimary : themeColors.textTertiary,
                   border: 'none',
                   borderRight: `1px solid ${themeColors.borderColor}`,
-                  borderBottom: activeTab === tab.id ? `2px solid ${themeColors.accentGreen}` : 'none',
+                  borderBottom: activeTab === tabId ? `2px solid ${themeColors.accentGreen}` : '2px solid transparent',
                   cursor: 'pointer',
                   fontSize: '11px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px',
+                  gap: '5px',
                   outline: 'none',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   fontFamily: 'var(--font-ibm-plex-mono)',
+                  whiteSpace: 'nowrap',
+                  transition: 'background 0.1s, color 0.1s',
                 }}
               >
-                <span>{tab.icon}</span>
-                {tab.label}
+                <span style={{ opacity: 0.5 }}>{TAB_ICON}</span>
+                {getTabLabel(tabId, t)}
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
+          {/* Tab content */}
           <div
             style={{
               padding: '14px',
@@ -527,7 +684,7 @@ export function DashboardClient({
           >
             {activeTab === 'profile' && (
               <ProfileTab
-                userData={initialData.userData}
+                userData={userData}
                 themeColors={themeColors}
                 t={t}
                 onUpdateBasicInfo={onUpdateBasicInfo}
@@ -549,7 +706,7 @@ export function DashboardClient({
 
             {activeTab === 'custom-data' && (
               <CustomDataTab
-                userData={initialData.userData}
+                userData={userData}
                 themeColors={themeColors}
                 t={t}
                 onUpdateCustomData={onUpdateCustomData}
@@ -561,7 +718,7 @@ export function DashboardClient({
 
             {activeTab === 'mfa' && (
               <MfaTab
-                userData={initialData.userData}
+                userData={userData}
                 themeColors={themeColors}
                 t={t}
                 onGetMfaVerifications={onGetMfaVerifications}
@@ -577,21 +734,21 @@ export function DashboardClient({
             )}
 
             {activeTab === 'identities' && (
-              <IdentitiesTab userData={initialData.userData} themeColors={themeColors} t={t} />
+              <IdentitiesTab userData={userData} themeColors={themeColors} t={t} />
             )}
 
             {activeTab === 'organizations' && (
-              <OrganizationsTab userData={initialData.userData} themeColors={themeColors} t={t} />
+              <OrganizationsTab userData={userData} themeColors={themeColors} t={t} />
             )}
 
             {activeTab === 'raw' && (
-              <RawDataTab userData={initialData.userData} themeColors={themeColors} t={t} />
+              <RawDataTab userData={userData} themeColors={themeColors} t={t} />
             )}
           </div>
         </div>
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <div
         style={{
           textAlign: 'center',
@@ -607,11 +764,8 @@ export function DashboardClient({
         <div>{t.dashboard.systemMessage}</div>
       </div>
 
-      {/* Toast Notifications */}
+      {/* ── Toasts ── */}
       <ToastContainer messages={toasts} onDismiss={dismissToast} themeColors={themeColors} />
     </div>
   );
 }
-
-// Import MfaVerification type
-import type { MfaVerification } from '../../logic/types';
