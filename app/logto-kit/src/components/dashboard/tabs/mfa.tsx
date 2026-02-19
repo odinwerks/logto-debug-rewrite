@@ -67,7 +67,7 @@ export function MfaTab({
       const verifications = await onGetMfaVerifications();
       setMfaVerifications(verifications);
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to load MFA');
+      onError(error instanceof Error ? error.message : t.mfa.loadFailed);
     } finally {
       setMfaLoading(false);
     }
@@ -91,7 +91,7 @@ export function MfaTab({
 
   const handleVerifyPasswordForMfa = useCallback(async () => {
     if (!mfaPassword) {
-      onError('Password required');
+      onError(t.mfa.passwordRequired);
       return;
     }
 
@@ -117,7 +117,7 @@ export function MfaTab({
           verificationId: identityId,
           step: 'complete',
         }));
-        onSuccess("Backup codes generated! Save them now - they won't be shown again.");
+        onSuccess(t.mfa.backupCodesGenerated);
       } else if (mfaVerificationState.operation === 'view-backup') {
         const result = await onGetBackupCodes(identityId);
         setBackupCodes(result.codes.map((c) => c.code));
@@ -129,12 +129,12 @@ export function MfaTab({
         }));
       } else if (mfaVerificationState.operation === 'delete-mfa' && mfaVerificationState.targetMfaId) {
         await onDeleteMfaVerification(mfaVerificationState.targetMfaId, identityId);
-        onSuccess('MFA factor removed successfully');
+        onSuccess(t.mfa.factorRemoved);
         cancelMfaOperation();
         await loadMfaVerifications();
       }
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Verification failed');
+      onError(err instanceof Error ? err.message : t.mfa.verificationFailed);
       cancelMfaOperation();
     } finally {
       setMfaLoading(false);
@@ -154,7 +154,7 @@ export function MfaTab({
 
   const handleCompleteTotpEnrollment = useCallback(async () => {
     if (!totpSecret || !totpVerificationCode || !mfaVerificationState.verificationId) {
-      onError('Missing verification code or session expired');
+      onError(t.mfa.missingVerification);
       return;
     }
 
@@ -164,11 +164,11 @@ export function MfaTab({
         { type: 'Totp', payload: { secret: totpSecret.secret, code: totpVerificationCode } },
         mfaVerificationState.verificationId
       );
-      onSuccess('TOTP enrolled successfully');
+      onSuccess(t.mfa.totpEnrolled);
       cancelMfaOperation();
       await loadMfaVerifications();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'TOTP verification failed');
+      onError(err instanceof Error ? err.message : t.mfa.totpVerificationFailed);
     } finally {
       setMfaLoading(false);
     }
@@ -193,8 +193,8 @@ export function MfaTab({
     a.download = `backup-codes-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    onSuccess('Backup codes downloaded');
-  }, [backupCodes, onSuccess]);
+    onSuccess(t.mfa.backupCodesDownloaded);
+  }, [backupCodes, onSuccess, t]);
 
   const downloadBackupCodesHtml = useCallback(() => {
     if (!backupCodes) return;
@@ -226,8 +226,8 @@ export function MfaTab({
     a.download = `backup-codes-${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(url);
-    onSuccess('Backup codes downloaded as HTML');
-  }, [backupCodes, onSuccess]);
+    onSuccess(t.mfa.backupCodesDownloadedHtml);
+  }, [backupCodes, onSuccess, t]);
 
   const formatDate = (date: string) => new Date(date).toLocaleString();
 
@@ -322,7 +322,7 @@ export function MfaTab({
                 {mfa.type !== 'BackupCode' && (
                   <button
                     onClick={() => {
-                      if (confirm(`Remove ${mfa.type} MFA factor?`)) {
+                      if (confirm(t.mfa.confirmRemoveFactor.replace('${mfa.type}', mfa.type))) {
                         setMfaVerificationState({
                           operation: 'delete-mfa',
                           targetMfaId: mfa.id,
@@ -361,14 +361,14 @@ export function MfaTab({
                 fontFamily: 'var(--font-ibm-plex-mono)',
               }}
             >
-              Verify your password to remove MFA factor
+              {t.mfa.verifyPasswordToRemoveFactor}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input
                 type="password"
                 value={mfaPassword}
                 onChange={(e) => setMfaPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={t.mfa.enterPasswordPlaceholder}
                 style={{
                   flex: 1,
                   padding: '8px',
@@ -448,14 +448,14 @@ export function MfaTab({
                 fontFamily: 'var(--font-ibm-plex-mono)',
               }}
             >
-              Verify your password to generate TOTP secret
+              {t.mfa.verifyPasswordToGenerateTotp}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input
                 type="password"
                 value={mfaPassword}
                 onChange={(e) => setMfaPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={t.mfa.enterPasswordPlaceholder}
                 style={{
                   flex: 1,
                   padding: '8px',
@@ -568,7 +568,7 @@ export function MfaTab({
                   type="text"
                   value={totpVerificationCode}
                   onChange={(e) => setTotpVerificationCode(e.target.value.replace(/\D/g, '').substring(0, 6))}
-                  placeholder="000000"
+                  placeholder={t.mfa.enterCodePlaceholder}
                   maxLength={6}
                   style={{
                     flex: 1,
@@ -672,14 +672,14 @@ export function MfaTab({
                 fontFamily: 'var(--font-ibm-plex-mono)',
               }}
             >
-              Verify your password to {mfaVerificationState.operation === 'generate-backup' ? 'generate' : 'view'} backup codes
+              {mfaVerificationState.operation === 'generate-backup' ? t.mfa.verifyPasswordToGenerateBackupCodes : t.mfa.verifyPasswordToViewBackupCodes}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input
                 type="password"
                 value={mfaPassword}
                 onChange={(e) => setMfaPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={t.mfa.enterPasswordPlaceholder}
                 style={{
                   flex: 1,
                   padding: '8px',

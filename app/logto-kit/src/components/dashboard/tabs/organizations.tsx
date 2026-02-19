@@ -47,7 +47,7 @@ export function OrganizationsTab({ userData, themeColors, t }: OrganizationsTabP
             fontFamily: 'var(--font-ibm-plex-mono)',
           }}
         >
-          Organizations you belong to.
+          {t.organizations.description}
         </p>
 
         {organizations.length === 0 ? (
@@ -96,7 +96,7 @@ export function OrganizationsTab({ userData, themeColors, t }: OrganizationsTabP
                       fontFamily: 'var(--font-ibm-plex-mono)',
                     }}
                   >
-                    ID: {org.id}
+                    {t.organizations.idLabel}: {org.id}
                   </div>
                 </div>
               </div>
@@ -135,7 +135,7 @@ export function OrganizationsTab({ userData, themeColors, t }: OrganizationsTabP
             fontFamily: 'var(--font-ibm-plex-mono)',
           }}
         >
-          Your roles within organizations.
+          {t.organizations.rolesDescription}
         </p>
 
         {organizationRoles.length === 0 ? (
@@ -182,7 +182,7 @@ export function OrganizationsTab({ userData, themeColors, t }: OrganizationsTabP
                       fontFamily: 'var(--font-ibm-plex-mono)',
                     }}
                   >
-                    Organization: {org?.name || role.organizationId}
+                    {t.organizations.organizationLabel}: {org?.name || role.organizationId}
                   </div>
                   <div
                     style={{
@@ -192,7 +192,7 @@ export function OrganizationsTab({ userData, themeColors, t }: OrganizationsTabP
                       fontFamily: 'var(--font-ibm-plex-mono)',
                     }}
                   >
-                    Role ID: {role.id}
+                    {t.organizations.roleIdLabel}: {role.id}
                   </div>
                 </div>
               );
@@ -219,12 +219,13 @@ export function OrganizationsTab({ userData, themeColors, t }: OrganizationsTabP
             fontFamily: 'var(--font-ibm-plex-mono)',
           }}
         >
-          RAW ORGANIZATIONS DATA
+          {t.organizations.rawHeading}
         </h3>
         <CodeBlock
-          title="organizations & organizationRoles"
+          title={t.organizations.rawTitle}
           data={{ organizations, organizationRoles }}
           themeColors={themeColors}
+          t={t}
         />
       </div>
     </div>

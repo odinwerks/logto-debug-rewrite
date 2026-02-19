@@ -33,7 +33,7 @@ export function RawDataTab({ userData, themeColors, t }: RawDataTabProps) {
         >
           {t.raw.rawUserData}
         </h3>
-        <CodeBlock title="userData" data={userData} themeColors={themeColors} maxHeight="600px" />
+        <CodeBlock title={t.raw.dataTitle} data={userData} themeColors={themeColors} maxHeight="600px" t={t} />
       </div>
     </div>
   );

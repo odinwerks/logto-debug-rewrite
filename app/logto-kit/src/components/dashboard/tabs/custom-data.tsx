@@ -53,7 +53,7 @@ export function CustomDataTab({
 
       setIsLoading(true);
       await onUpdateCustomData(parsed);
-      onSuccess('Custom data updated successfully');
+      onSuccess(t.customData.success);
       setIsEditing(false);
       setParseError('');
       refreshData();
@@ -61,7 +61,7 @@ export function CustomDataTab({
       if (error instanceof SyntaxError) {
         setParseError(`${t.customData.invalidJson}: ${error.message}`);
       } else {
-        onError(error instanceof Error ? error.message : 'Failed to update custom data');
+        onError(error instanceof Error ? error.message : t.customData.error);
       }
     } finally {
       setIsLoading(false);
@@ -124,7 +124,7 @@ export function CustomDataTab({
             fontFamily: 'var(--font-ibm-plex-mono)',
           }}
         >
-          Store custom application data as JSON. This data is returned with user info.
+          {t.customData.description}
         </p>
 
         {isEditing ? (
@@ -208,6 +208,7 @@ export function CustomDataTab({
             data={userData.customData}
             themeColors={themeColors}
             maxHeight="400px"
+            t={t}
           />
         )}
       </div>

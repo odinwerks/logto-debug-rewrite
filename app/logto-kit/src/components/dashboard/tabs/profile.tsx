@@ -84,7 +84,7 @@ export function ProfileTab({
 
   const handleRemoveEmail = useCallback(async () => {
     if (!userData.primaryEmail) return;
-    if (!confirm(`Remove email ${userData.primaryEmail}?`)) return;
+    if (!confirm(t.profile.confirmRemoveEmail)) return;
 
     setVerificationState({
       type: 'email',
@@ -100,7 +100,7 @@ export function ProfileTab({
 
   const handleRemovePhone = useCallback(async () => {
     if (!userData.primaryPhone) return;
-    if (!confirm(`Remove phone ${userData.primaryPhone}?`)) return;
+    if (!confirm(t.profile.confirmRemovePhone)) return;
 
     setVerificationState({
       type: 'phone',
@@ -116,7 +116,7 @@ export function ProfileTab({
 
   const handleVerifyPassword = useCallback(async () => {
     if (!passwordForVerification) {
-      onError('Password required');
+      onError(t.profile.passwordRequired);
       return;
     }
 
@@ -129,10 +129,10 @@ export function ProfileTab({
       if (verificationState.operation === 'remove') {
         if (verificationState.type === 'email') {
           await onRemoveEmail(identityId);
-          onSuccess('Email removed successfully');
+          onSuccess(t.profile.emailRemoved);
         } else {
           await onRemovePhone(identityId);
-          onSuccess('Phone removed successfully');
+          onSuccess(t.profile.phoneRemoved);
         }
         cancelVerification();
         refreshData();
@@ -149,7 +149,7 @@ export function ProfileTab({
         onSuccess(`${t.verification.codeSent} ${verificationState.newValue}`);
       }
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Verification failed');
+      onError(err instanceof Error ? err.message : t.profile.verificationFailed);
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +169,7 @@ export function ProfileTab({
 
   const handleVerifyCodeAndUpdate = useCallback(async () => {
     if (!verificationCode || !identityVerificationId || !verificationState.verificationId) {
-      onError('Missing verification information');
+      onError(t.profile.missingVerification);
       return;
     }
 
@@ -185,16 +185,16 @@ export function ProfileTab({
 
       if (verificationState.type === 'email') {
         await onUpdateEmail(verificationState.newValue, newIdentifierVerificationRecordId, identityVerificationId);
-        onSuccess('Email updated successfully');
+        onSuccess(t.profile.emailUpdated);
       } else if (verificationState.type === 'phone') {
         await onUpdatePhone(verificationState.newValue, newIdentifierVerificationRecordId, identityVerificationId);
-        onSuccess('Phone updated successfully');
+        onSuccess(t.profile.phoneUpdated);
       }
 
       cancelVerification();
       refreshData();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Update failed');
+      onError(err instanceof Error ? err.message : t.profile.updateFailed);
     } finally {
       setIsLoading(false);
     }
@@ -240,11 +240,11 @@ export function ProfileTab({
         familyName: editFamilyName,
       });
 
-      onSuccess('Profile updated successfully');
+      onSuccess(t.profile.profileUpdated);
       setIsEditingProfile(false);
       refreshData();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Update failed');
+      onError(err instanceof Error ? err.message : t.profile.updateFailed);
     } finally {
       setIsLoading(false);
     }
@@ -282,6 +282,7 @@ export function ProfileTab({
               updatedAt: userData.updatedAt,
             }}
             themeColors={themeColors}
+            t={t}
           />
           <button
             onClick={() => setIsEditingProfile(true)}
@@ -388,7 +389,7 @@ export function ProfileTab({
               type="text"
               value={editUsername}
               onChange={(e) => setEditUsername(e.target.value)}
-              placeholder="Enter username (optional)"
+              placeholder={t.profile.usernamePlaceholder}
               style={{
                 width: '100%',
                 padding: '8px',
@@ -424,7 +425,7 @@ export function ProfileTab({
                     onChange={(e) =>
                       setVerificationState((prev) => ({ ...prev, newValue: e.target.value }))
                     }
-                    placeholder={userData.primaryEmail ? 'Enter new email' : 'Enter email'}
+                    placeholder={t.profile.emailPlaceholder}
                     disabled={verificationState.step === 'code'}
                     style={{
                       flex: '2',
@@ -607,7 +608,7 @@ export function ProfileTab({
                     onChange={(e) =>
                       setVerificationState((prev) => ({ ...prev, newValue: e.target.value }))
                     }
-                    placeholder={userData.primaryPhone ? 'Enter new phone' : 'Enter phone'}
+                    placeholder={t.profile.phonePlaceholder}
                     disabled={verificationState.step === 'code'}
                     style={{
                       flex: '2',

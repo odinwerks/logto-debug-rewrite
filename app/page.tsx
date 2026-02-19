@@ -1,6 +1,7 @@
 import { getLogtoContext } from '@logto/next/server-actions';
 import { logtoConfig } from './logto';
 import { Dashboard } from './logto-kit/src';
+import { getTranslations, getMainLocale } from './logto-kit/src/locales';
 
 async function handleSignIn() {
   'use server';
@@ -9,6 +10,8 @@ async function handleSignIn() {
 }
 
 export default async function HomePage() {
+  const locale = getMainLocale();
+  const t = getTranslations(locale);
   const { isAuthenticated } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated) {
@@ -33,10 +36,10 @@ export default async function HomePage() {
           }}
         >
           <h1 style={{ color: '#d1d5db', marginBottom: '20px', fontFamily: 'var(--font-ibm-plex-mono)' }}>
-            LOGTO DEBUG DASHBOARD
+            {t.dashboard.title}
           </h1>
           <p style={{ color: '#9ca3af', marginBottom: '30px', fontFamily: 'var(--font-ibm-plex-mono)', fontSize: '12px' }}>
-            Sign in to view and edit your profile data
+            {t.dashboard.signInPrompt}
           </p>
           <button
             type="submit"
@@ -51,7 +54,7 @@ export default async function HomePage() {
               fontFamily: 'var(--font-ibm-plex-mono)',
             }}
           >
-            [SIGN IN]
+            {t.dashboard.signInButton}
           </button>
         </div>
       </form>

@@ -45,7 +45,7 @@ export function IdentitiesTab({ userData, themeColors, t }: IdentitiesTabProps) 
             fontFamily: 'var(--font-ibm-plex-mono)',
           }}
         >
-          External authentication providers linked to your account.
+          {t.identities.description}
         </p>
 
         {identityEntries.length === 0 ? (
@@ -92,7 +92,7 @@ export function IdentitiesTab({ userData, themeColors, t }: IdentitiesTabProps) 
                     fontFamily: 'var(--font-ibm-plex-mono)',
                   }}
                 >
-                  User ID: {identity.userId}
+                  {t.identities.userIdLabel}: {identity.userId}
                 </div>
                 {identity.details && Object.keys(identity.details).length > 0 && (
                   <div
@@ -112,7 +112,7 @@ export function IdentitiesTab({ userData, themeColors, t }: IdentitiesTabProps) 
                         marginBottom: '4px',
                       }}
                     >
-                      DETAILS:
+                      {t.identities.detailsLabel}:
                     </div>
                     <pre
                       style={{
@@ -151,9 +151,9 @@ export function IdentitiesTab({ userData, themeColors, t }: IdentitiesTabProps) 
             fontFamily: 'var(--font-ibm-plex-mono)',
           }}
         >
-          RAW IDENTITIES DATA
+          {t.identities.rawHeading}
         </h3>
-        <CodeBlock title="identities" data={userData.identities} themeColors={themeColors} />
+        <CodeBlock title={t.identities.rawTitle} data={userData.identities} themeColors={themeColors} t={t} />
       </div>
     </div>
   );

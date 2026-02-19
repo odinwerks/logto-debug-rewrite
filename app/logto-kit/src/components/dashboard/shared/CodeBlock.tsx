@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ThemeColors } from '../../../themes';
+import type { Translations } from '../../../locales';
 
 // Simple Copy Icon SVG
 const CopyIcon = () => (
@@ -18,6 +19,7 @@ interface CodeBlockProps {
   maxHeight?: string;
   copyKey?: string;
   onCopy?: (text: string, key: string) => void;
+  t: Translations;
 }
 
 export function CodeBlock({
@@ -27,6 +29,7 @@ export function CodeBlock({
   maxHeight = '400px',
   copyKey = 'default',
   onCopy,
+  t,
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
@@ -70,7 +73,7 @@ export function CodeBlock({
             transition: 'color 0.2s',
           }}
         >
-          {copied ? 'COPIED!' : 'COPY'}
+          {copied ? t.common.copied : t.common.copy}
         </button>
       </div>
       <pre
@@ -97,9 +100,10 @@ export function CodeBlock({
 interface TruncatedTokenProps {
   token: string;
   themeColors: ThemeColors;
+  t: Translations;
 }
 
-export function TruncatedToken({ token, themeColors }: TruncatedTokenProps) {
+export function TruncatedToken({ token, themeColors, t }: TruncatedTokenProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -155,7 +159,7 @@ export function TruncatedToken({ token, themeColors }: TruncatedTokenProps) {
           justifyContent: 'center',
           transition: 'color 0.2s',
         }}
-        title="Copy token"
+        title={t.common.copy}
       >
         <CopyIcon />
       </button>

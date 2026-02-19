@@ -21,10 +21,19 @@ export * from './components/dashboard';
 // ============================================================================
 
 export * from './themes';
-export * from './themes/default';
 
 // ============================================================================
 // Locales
 // ============================================================================
 
 export * from './locales';
+
+// ============================================================================
+// ENV-based utilities
+// ============================================================================
+
+export { getSupportedLangs, getDefaultLang, isValidLang, getNextLang, resolvelang, AVAILABLE_LOCALES } from './logic/i18n';
+export { getLoadedTabs, ALL_TABS } from './logic/tabs';
+export { getPreferencesFromUserData, buildUpdatedCustomData, hasPreferences } from './logic/preferences';
+export { getDefaultThemeMode } from './themes';
+export { getAllTranslations } from './locales';
