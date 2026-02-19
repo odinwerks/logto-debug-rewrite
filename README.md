@@ -7,9 +7,13 @@ A modular Next.js debug dashboard for Logto authentication with comprehensive us
 - **Terminal/Hacker Aesthetic**: OG styling with bracketed buttons, monospace fonts, and dark/light themes
 - **Two-Column Layout**: Sidebar with avatar, token, and user info; main content area with tabs
 - **Full User Management**: Profile, custom data, identities, organizations, MFA, and raw data views
-- **Theme System**: ENV-based theme loading with dark/light variants
-- **i18n Support**: Multi-language support with ENV-based locale configuration
+- **Theme System**: User-created themes with ENV-selected activation and default theme mode
+- **i18n Support**: Multi-language support with ENV-configured locale availability and ordering
 - **MFA Management**: TOTP enrollment, backup codes generation, and WebAuthn support
+- **User Preferences**: Automatic persistence of theme and language choices in Logto customData
+- **Tab Configuration**: Select which tabs to display and their order via ENV variable
+- **Cookie Recovery**: Automatic handling of stale cookie contexts with cookie-killer utility
+- **Translation-First Validation**: All validation messages use translation strings for full i18n coverage
 
 ## Project Structure
 
@@ -108,6 +112,8 @@ NEXT_LANG_AVAILABLE=en-US,ka-GE
 
 ## Theme System
 
+Themes are user-created and ENV-selected. Each theme lives in its own folder under `app/logto-kit/src/themes/` and is activated by setting the `THEME` environment variable.
+
 Themes are loaded from `app/logto-kit/src/themes/{THEME}/`:
 
 - `dark.css` - Dark theme variables
@@ -134,6 +140,91 @@ Translations are loaded from `app/logto-kit/src/locales/`:
 2. Export a `Translations` object matching the interface
 3. Register in `locales/index.ts`
 4. Add to `LANG_AVAILABLE` in your `.env`
+
+## Tab Configuration
+
+The dashboard supports configurable tabs via the `LOAD_TABS` environment variable. This allows you to control which tabs are displayed and their order.
+
+### Tab IDs and Aliases
+
+Available tab IDs with their display aliases:
+
+| Tab ID | Aliases | Description |
+|--------|---------|-------------|
+| `profile` | `personal`, `user` | User profile and basic info |
+| `custom-data` | `custom`, `customdata` | Custom JSON data editor |
+| `identities` | `identity` | External identity providers |
+| `organizations` | `orgs`, `org` | Organization memberships and roles |
+| `mfa` | `2fa`, `totp` | Multi-factor authentication management |
+| `raw` | `debug`, `data` | Raw user data view |
+
+### Configuration Examples
+
+```env
+# Show all tabs in default order
+LOAD_TABS=profile,custom-data,identities,organizations,mfa,raw
+
+# Show only profile, MFA, and custom data (in that order)
+LOAD_TABS=profile,mfa,custom-data
+
+# Use aliases - these are all equivalent to the first example
+LOAD_TABS=personal,custom,identity,orgs,2fa,debug
+LOAD_TABS=user,customdata,identities,organization,totp,data
+
+# If not set or empty, shows all tabs in default order
+```
+
+### How Tab Loading Works
+
+1. **ENV Parsing**: `LOAD_TABS` is parsed as comma-separated list
+2. **Alias Resolution**: Each token is mapped to its canonical tab ID
+3. **Validation**: Invalid tokens are skipped with a warning
+4. **Deduplication**: Duplicate tabs are removed while preserving order
+5. **Fallback**: If no valid tabs remain, all tabs are shown in default order
+
+## User Preferences & JSON Schema
+
+The dashboard automatically stores user preferences (theme mode and language selection) in Logto's `customData` field under a `Preferences` key. This allows preferences to persist across sessions and devices.
+
+### JSON Schema Update (Important!)
+
+To ensure type safety and proper validation in your Logto application, update your Logto application's JSON schema to include the `Preferences` key:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "Preferences": {
+      "type": "object",
+      "properties": {
+        "theme": {
+          "type": "string",
+          "enum": ["dark", "light"]
+        },
+        "lang": {
+          "type": "string",
+          "pattern": "^[a-zA-Z]{2}-[A-Z]{2}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
+```
+
+This ensures that:
+1. The `Preferences` object has the correct structure
+2. Only valid theme values (`dark` or `light`) are accepted
+3. Language codes follow the locale pattern (e.g., `en-US`, `ka-GE`)
+4. Other custom data keys remain unaffected
+
+### How Preferences Work
+
+1. **First Visit**: No preferences exist, defaults from ENV are used (`DEFAULT_THEME_MODE`, `LANG_MAIN`)
+2. **User Changes**: When user changes theme or language, preferences are saved to `customData.Preferences`
+3. **Subsequent Visits**: Preferences are read from `customData` and override ENV defaults
+4. **ENV Changes**: If supported languages change (ENV `LANG_AVAILABLE`), preferences are validated and normalized
 
 ## Installation
 
