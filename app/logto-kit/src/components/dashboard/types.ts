@@ -1,13 +1,15 @@
 import type { UserData, MfaVerification, MfaVerificationPayload } from '../../logic/types';
 import type { ThemeColors } from '../../themes';
 import type { Translations } from '../../locales';
+// TabId lives in logic/tabs so that the logic layer never has to import from components
+import type { TabId } from '../../logic/tabs';
+
+export type { TabId };
 
 export interface DashboardData {
   userData: UserData;
   accessToken: string;
 }
-
-export type TabId = 'profile' | 'custom-data' | 'identities' | 'organizations' | 'mfa' | 'raw';
 
 export interface ToastMessage {
   id: string;
