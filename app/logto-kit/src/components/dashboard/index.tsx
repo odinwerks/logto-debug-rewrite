@@ -23,8 +23,10 @@ import {
 } from '../../logic/actions';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { getTranslations, getMainLocale } from '../../locales';
-import { getThemeName } from '../../themes';
+import { getTranslations, getMainLocale, getAllTranslations } from '../../locales';
+import { getDefaultThemeMode } from '../../themes';
+import { getSupportedLangs } from '../../logic/i18n';
+import { getLoadedTabs } from '../../logic/tabs';
 
 // Server action for refresh
 async function handleRefresh() {
@@ -34,13 +36,21 @@ async function handleRefresh() {
 }
 
 export async function Dashboard() {
-  // Load translations based on ENV
+  // ── Locale & translations ──────────────────────────────────────────────────
   const locale = getMainLocale();
   const translations = getTranslations(locale);
+  const allTranslations = getAllTranslations();
 
-  // Load theme based on ENV
-  const themeName = getThemeName();
+  // ── Supported langs (ordered from ENV) ────────────────────────────────────
+  const supportedLangs = getSupportedLangs();
 
+  // ── Tabs (ordered from ENV) ────────────────────────────────────────────────
+  const loadedTabs = getLoadedTabs();
+
+  // ── Theme default from ENV ─────────────────────────────────────────────────
+  const defaultThemeMode = getDefaultThemeMode();
+
+  // ── Fetch user data ────────────────────────────────────────────────────────
   const result = await fetchDashboardData();
 
   if (!result.success) {
@@ -74,7 +84,7 @@ export async function Dashboard() {
             {translations.dashboard.error}
           </h1>
           <p style={{ fontSize: '12px', color: '#9ca3af' }}>
-            {'error' in result ? result.error : 'Failed to load dashboard data'}
+            {'error' in result ? result.error : translations.dashboard.loadFailed}
           </p>
         </div>
       </div>
@@ -88,6 +98,11 @@ export async function Dashboard() {
         accessToken: result.accessToken,
       }}
       translations={translations}
+      allTranslations={allTranslations}
+      supportedLangs={supportedLangs}
+      initialLang={locale}
+      loadedTabs={loadedTabs}
+      initialTheme={defaultThemeMode}
       onUpdateBasicInfo={updateUserBasicInfo}
       onUpdateAvatarUrl={updateAvatarUrl}
       onUpdateProfile={updateUserProfile}
