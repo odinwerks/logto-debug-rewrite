@@ -12,6 +12,12 @@ export const enUS: Translations = {
     session: 'SESSION',
     processing: '[PROCESSING...]',
     systemMessage: '[SYSTEM] This debug tool is barely an ALPHA. It itself may be a bug. Haaaave fuun.',
+    availableLangs: 'AVAILABLE LANGUAGES',
+    refreshFailed: 'Failed to refresh data',
+    signOutFailed: 'Sign out failed',
+    loadFailed: 'Failed to load dashboard data',
+    signInPrompt: 'Sign in to view and edit your profile data',
+    signInButton: '[SIGN IN]',
   },
   
   // Terminal header
@@ -39,6 +45,7 @@ export const enUS: Translations = {
     lastLogin: 'LAST_LOGIN',
     lightMode: '[LIGHT MODE]',
     darkMode: '[DARK MODE]',
+    active: 'active',
   },
   
   // Profile tab
@@ -63,6 +70,20 @@ export const enUS: Translations = {
     notSet: '(not set)',
     avatarUrl: 'AVATAR URL',
     editAvatarUrl: '[EDIT AVATAR URL]',
+    passwordRequired: 'Password required',
+    emailRemoved: 'Email removed successfully',
+    phoneRemoved: 'Phone removed successfully',
+    verificationFailed: 'Verification failed',
+    missingVerification: 'Missing verification information',
+    emailUpdated: 'Email updated successfully',
+    phoneUpdated: 'Phone updated successfully',
+    updateFailed: 'Update failed',
+    profileUpdated: 'Profile updated successfully',
+    confirmRemoveEmail: 'Are you sure you want to remove this email?',
+    confirmRemovePhone: 'Are you sure you want to remove this phone?',
+    usernamePlaceholder: 'Enter username (optional)',
+    emailPlaceholder: 'Enter email',
+    phonePlaceholder: 'Enter phone',
   },
   
   // Verification
@@ -72,6 +93,25 @@ export const enUS: Translations = {
     verificationCode: 'Code',
     verifyCode: '[VERIFY CODE]',
     codeSent: 'Code sent to',
+  },
+  
+  // Validation messages
+  validation: {
+    phoneE164Format: 'Phone must be E.164 format (e.g., +995555123456)',
+    invalidEmailFormat: 'Invalid email format',
+    emailTooLong: 'Email too long (max 128 characters)',
+    passwordRequired: 'Password is required',
+    passwordTooLong: 'Password too long (max 256 characters)',
+    codeMustBeSixDigits: 'Code must be exactly 6 digits',
+    verificationIdRequired: 'Verification ID is required',
+    usernameTooShort: 'Username too short (min 3 characters)',
+    usernameTooLong: 'Username too long (max 32 characters)',
+    usernameInvalidCharacters: 'Username can only contain letters, numbers, underscores, and hyphens',
+    urlInvalidProtocol: 'URL must use http or https protocol',
+    urlInvalidFormat: 'Invalid URL format',
+    jsonMustBeObject: 'Must be a JSON object (not array or null)',
+    invalidJson: 'Invalid JSON',
+    unknownError: 'Unknown error',
   },
   
   // Custom Data tab
@@ -85,12 +125,20 @@ export const enUS: Translations = {
     noCustomData: 'No custom data fields found',
     invalidJson: 'Invalid JSON',
     mustBeObject: 'Must be a JSON object',
+    description: 'Store custom application data as JSON. This data is returned with user info.',
+    success: 'Custom data updated successfully',
+    error: 'Failed to update custom data',
   },
   
   // Identities tab
   identities: {
     title: 'IDENTITIES',
     noIdentities: 'No external identities linked',
+    description: 'External authentication providers linked to your account.',
+    userIdLabel: 'User ID',
+    detailsLabel: 'DETAILS',
+    rawTitle: 'identities',
+    rawHeading: 'RAW IDENTITIES DATA',
   },
   
   // Organizations tab
@@ -100,6 +148,13 @@ export const enUS: Translations = {
     orgRoles: 'ORGANIZATION ROLES',
     noOrganizations: 'Not a member of any organizations',
     noRoles: 'No organization roles assigned',
+    description: 'Organizations you belong to.',
+    rolesDescription: 'Your roles within organizations.',
+    idLabel: 'ID',
+    organizationLabel: 'Organization',
+    roleIdLabel: 'Role ID',
+    rawTitle: 'organizations & organizationRoles',
+    rawHeading: 'RAW ORGANIZATIONS DATA',
   },
   
   // MFA tab
@@ -133,12 +188,31 @@ export const enUS: Translations = {
     remove: '[REMOVE]',
     created: 'Created',
     lastUsed: 'Last used',
+    passwordRequired: 'Password required',
+    backupCodesGenerated: "Backup codes generated! Save them now - they won't be shown again.",
+    factorRemoved: 'MFA factor removed successfully',
+    missingVerification: 'Missing verification code or session expired',
+    totpEnrolled: 'TOTP enrolled successfully',
+    backupCodesDownloaded: 'Backup codes downloaded',
+    backupCodesDownloadedHtml: 'Backup codes downloaded as HTML',
+    enterPasswordPlaceholder: 'Enter password',
+    enterCodePlaceholder: '000000',
+    updateFailed: 'Failed to update MFA',
+    loadFailed: 'Failed to load MFA',
+    verificationFailed: 'Verification failed',
+    totpVerificationFailed: 'TOTP verification failed',
+    confirmRemoveFactor: 'Remove ${mfa.type} MFA factor?',
+    verifyPasswordToRemoveFactor: 'Verify your password to remove MFA factor',
+    verifyPasswordToGenerateTotp: 'Verify your password to generate TOTP secret',
+    verifyPasswordToGenerateBackupCodes: 'Verify your password to generate backup codes',
+    verifyPasswordToViewBackupCodes: 'Verify your password to view backup codes',
   },
   
   // Raw tab
   raw: {
     title: 'RAW',
     rawUserData: 'RAW USER DATA',
+    dataTitle: 'userData',
   },
   
   // Common
@@ -150,6 +224,8 @@ export const enUS: Translations = {
     error: '[ERROR]',
     loading: '[...]',
     retry: '[RETRY]',
+    notAvailable: 'N/A',
+    invalidDate: 'Invalid Date',
   },
 };
 

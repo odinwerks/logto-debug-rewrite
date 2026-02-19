@@ -10,6 +10,7 @@
 
 import { enUS } from './en-US';
 import { kaGE } from './ka-GE';
+import { getDefaultLang } from '../logic/i18n';
 
 export type LocaleCode = 'en-US' | 'ka-GE';
 
@@ -25,6 +26,12 @@ export interface Translations {
     session: string;
     processing: string;
     systemMessage: string;
+    availableLangs: string;
+    refreshFailed: string;
+    signOutFailed: string;
+    loadFailed: string;
+    signInPrompt: string;
+    signInButton: string;
   };
   
   // Terminal header
@@ -52,6 +59,7 @@ export interface Translations {
     lastLogin: string;
     lightMode: string;
     darkMode: string;
+    active: string;
   };
   
   // Profile tab
@@ -76,6 +84,20 @@ export interface Translations {
     notSet: string;
     avatarUrl: string;
     editAvatarUrl: string;
+    passwordRequired: string;
+    emailRemoved: string;
+    phoneRemoved: string;
+    verificationFailed: string;
+    missingVerification: string;
+    emailUpdated: string;
+    phoneUpdated: string;
+    updateFailed: string;
+    profileUpdated: string;
+    confirmRemoveEmail: string;
+    confirmRemovePhone: string;
+    usernamePlaceholder: string;
+    emailPlaceholder: string;
+    phonePlaceholder: string;
   };
   
   // Verification
@@ -85,6 +107,25 @@ export interface Translations {
     verificationCode: string;
     verifyCode: string;
     codeSent: string;
+  };
+
+  // Validation messages
+  validation: {
+    phoneE164Format: string;
+    invalidEmailFormat: string;
+    emailTooLong: string;
+    passwordRequired: string;
+    passwordTooLong: string;
+    codeMustBeSixDigits: string;
+    verificationIdRequired: string;
+    usernameTooShort: string;
+    usernameTooLong: string;
+    usernameInvalidCharacters: string;
+    urlInvalidProtocol: string;
+    urlInvalidFormat: string;
+    jsonMustBeObject: string;
+    invalidJson: string;
+    unknownError: string;
   };
   
   // Custom Data tab
@@ -98,12 +139,20 @@ export interface Translations {
     noCustomData: string;
     invalidJson: string;
     mustBeObject: string;
+    description: string;
+    success: string;
+    error: string;
   };
   
   // Identities tab
   identities: {
     title: string;
     noIdentities: string;
+    description: string;
+    userIdLabel: string;
+    detailsLabel: string;
+    rawTitle: string;
+    rawHeading: string;
   };
   
   // Organizations tab
@@ -113,6 +162,13 @@ export interface Translations {
     orgRoles: string;
     noOrganizations: string;
     noRoles: string;
+    description: string;
+    rolesDescription: string;
+    idLabel: string;
+    organizationLabel: string;
+    roleIdLabel: string;
+    rawTitle: string;
+    rawHeading: string;
   };
   
   // MFA tab
@@ -146,12 +202,31 @@ export interface Translations {
     remove: string;
     created: string;
     lastUsed: string;
+    passwordRequired: string;
+    backupCodesGenerated: string;
+    factorRemoved: string;
+    missingVerification: string;
+    totpEnrolled: string;
+    backupCodesDownloaded: string;
+    backupCodesDownloadedHtml: string;
+    enterPasswordPlaceholder: string;
+    enterCodePlaceholder: string;
+    updateFailed: string;
+    loadFailed: string;
+    verificationFailed: string;
+    totpVerificationFailed: string;
+    confirmRemoveFactor: string;
+    verifyPasswordToRemoveFactor: string;
+    verifyPasswordToGenerateTotp: string;
+    verifyPasswordToGenerateBackupCodes: string;
+    verifyPasswordToViewBackupCodes: string;
   };
   
   // Raw tab
   raw: {
     title: string;
     rawUserData: string;
+    dataTitle: string;
   };
   
   // Common
@@ -163,6 +238,8 @@ export interface Translations {
     error: string;
     loading: string;
     retry: string;
+    notAvailable: string;
+    invalidDate: string;
   };
 }
 
@@ -174,21 +251,12 @@ const locales: Record<LocaleCode, Translations> = {
 
 /**
  * Get main locale from environment
- * Priority: LANG_MAIN > NEXT_LANG_NAME > 'en-US'
+ * Uses getDefaultLang from logic/i18n as single source of truth
  */
 export function getMainLocale(): LocaleCode {
-  const lang = process.env.LANG_MAIN || process.env.NEXT_LANG_NAME || 'en-US';
-  const normalized = lang.toUpperCase() as LocaleCode;
-  
-  // Check if locale exists
-  if (locales[normalized]) {
-    return normalized;
-  }
-  
-  // Try without region
-  const baseLang = normalized.split('-')[0];
-  const match = Object.keys(locales).find(l => l.startsWith(baseLang));
-  return (match as LocaleCode) || 'en-US';
+  const defaultLang = getDefaultLang();
+  // defaultLang is guaranteed to be in AVAILABLE_LOCALES, which matches LocaleCode
+  return defaultLang as LocaleCode;
 }
 
 /**
@@ -208,6 +276,13 @@ export function getAvailableLocales(): LocaleCode[] {
  */
 export function getTranslations(locale: LocaleCode): Translations {
   return locales[locale] || locales['en-US'];
+}
+
+/**
+ * Returns the full map of all translations
+ */
+export function getAllTranslations(): Record<string, Translations> {
+  return locales;
 }
 
 /**

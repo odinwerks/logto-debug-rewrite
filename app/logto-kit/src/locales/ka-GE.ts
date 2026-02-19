@@ -12,22 +12,28 @@ export const kaGE: Translations = {
     session: 'სესია',
     processing: '[დამუშავება...]',
     systemMessage: '[სისტემა] ეს დებაგ ინსტრუმენტი მხოლოდ ALPHA-ს ფაზაშია. შეიძლება თავად იყოს ბაგი. გაერთეთ.',
+    availableLangs: 'ხელმისაწვდომი ენები',
+    refreshFailed: 'მონაცემების განახლება ვერ მოხერხდა',
+    signOutFailed: 'გასვლა ვერ მოხერხდა',
+    loadFailed: 'დაშბორდის მონაცემების ჩატვირთვა ვერ მოხერხდა',
+    signInPrompt: 'შედით სისტემაში, რომ ნახოთ და შეცვალოთ თქვენი პროფილის მონაცემები',
+    signInButton: '[შესვლა]',
   },
   
   // Terminal header
   terminal: {
-    prompt: 'user@logto-debug:~$',
+    prompt: 'მომხმარებელი@logto-debug:~$',
     command: 'sudo userinfo --verbose --edit',
   },
   
   // Tabs
   tabs: {
     profile: 'მომხმარებელი',
-    customData: 'CUSTOM',
+    customData: 'საკუთარი მონაცემები',
     identities: 'იდენტიტეტები',
     organizations: 'ორგანიზაციები',
-    mfa: 'MFA',
-    raw: 'RAW',
+    mfa: 'მრავალფაქტორული აუთენტიფიკაცია',
+    raw: 'ნედლი',
   },
   
   // Sidebar
@@ -39,6 +45,7 @@ export const kaGE: Translations = {
     lastLogin: 'ბოლო შესვლა',
     lightMode: '[ნათელი რეჟიმი]',
     darkMode: '[მუქი რეჟიმი]',
+    active: 'აქტიური',
   },
   
   // Profile tab
@@ -63,6 +70,20 @@ export const kaGE: Translations = {
     notSet: '(არ არის მითითებული)',
     avatarUrl: 'ავატარის URL',
     editAvatarUrl: '[ავატარის URL-ის რედაქტირება]',
+    passwordRequired: 'პაროლი საჭიროა',
+    emailRemoved: 'ელფოსტა წაიშალა წარმატებით',
+    phoneRemoved: 'ტელეფონი წაიშალა წარმატებით',
+    verificationFailed: 'ვერიფიკაცია ვერ მოხერხდა',
+    missingVerification: 'ვერიფიკაციის ინფორმაცია აკლია',
+    emailUpdated: 'ელფოსტა განახლდა წარმატებით',
+    phoneUpdated: 'ტელეფონი განახლდა წარმატებით',
+    updateFailed: 'განახლება ვერ მოხერხდა',
+    profileUpdated: 'პროფილი განახლდა წარმატებით',
+    confirmRemoveEmail: 'დარწმუნებული ხართ, რომ გსურთ ამ ელფოსტის წაშლა?',
+    confirmRemovePhone: 'დარწმუნებული ხართ, რომ გსურთ ამ ტელეფონის წაშლა?',
+    usernamePlaceholder: 'შეიყვანეთ მომხმარებლის სახელი (არასავალდებულო)',
+    emailPlaceholder: 'შეიყვანეთ ელფოსტა',
+    phonePlaceholder: 'შეიყვანეთ ტელეფონი',
   },
   
   // Verification
@@ -74,23 +95,50 @@ export const kaGE: Translations = {
     codeSent: 'კოდი გამოგზავნილია',
   },
   
+  // Validation messages
+  validation: {
+    phoneE164Format: 'ტელეფონი უნდა იყოს E.164 ფორმატში (მაგ., +995555123456)',
+    invalidEmailFormat: 'არასწორი ელფოსტის ფორმატი',
+    emailTooLong: 'ელფოსტა ძალიან გრძელია (მაქსიმუმ 128 სიმბოლო)',
+    passwordRequired: 'პაროლი აუცილებელია',
+    passwordTooLong: 'პაროლი ძალიან გრძელია (მაქსიმუმ 256 სიმბოლო)',
+    codeMustBeSixDigits: 'კოდი უნდა იყოს ზუსტად 6 ციფრი',
+    verificationIdRequired: 'ვერიფიკაციის ID აუცილებელია',
+    usernameTooShort: 'მომხმარებლის სახელი ძალიან მოკლეა (მინიმუმ 3 სიმბოლო)',
+    usernameTooLong: 'მომხმარებლის სახელი ძალიან გრძელია (მაქსიმუმ 32 სიმბოლო)',
+    usernameInvalidCharacters: 'მომხმარებლის სახელი შეიძლება შეიცავდეს მხოლოდ ასოებს, ციფრებს, ქვედა ტირეებს და ტირეებს',
+    urlInvalidProtocol: 'URL უნდა იყენებდეს http ან https პროტოკოლს',
+    urlInvalidFormat: 'არასწორი URL ფორმატი',
+    jsonMustBeObject: 'უნდა იყოს JSON ობიექტი (არა მასივი ან null)',
+    invalidJson: 'არასწორი JSON',
+    unknownError: 'უცნობი შეცდომა',
+  },
+  
   // Custom Data tab
   customData: {
-    title: 'CUSTOM მონაცემები',
-    editing: 'CUSTOM მონაცემების რედაქტირება',
+    title: 'საკუთარი მონაცემები',
+    editing: 'საკუთარი მონაცემების რედაქტირება',
     jsonData: 'JSON მონაცემები',
-    editCustomData: '[CUSTOM მონაცემების რედაქტირება]',
+    editCustomData: '[საკუთარი მონაცემების რედაქტირება]',
     save: '[შენახვა]',
     empty: '[ცარიელი]',
     noCustomData: 'CUSTOM მონაცემები არ მოიძებნა',
     invalidJson: 'არასწორი JSON',
     mustBeObject: 'უნდა იყოს JSON ობიექტი',
+    description: 'შეინახეთ საკუთარი აპლიკაციის მონაცემები JSON-ის სახით. ეს მონაცემები დაბრუნდება მომხმარებლის ინფორმაციასთან ერთად.',
+    success: 'საკუთარი მონაცემები წარმატებით განახლდა',
+    error: 'საკუთარი მონაცემების განახლება ვერ მოხერხდა',
   },
   
   // Identities tab
   identities: {
     title: 'იდენტიტეტები',
     noIdentities: 'გარე იდენტიტეტები არ არის დაკავშირებული',
+    description: 'გარე აუთენტიფიკაციის პროვაიდერები, რომლებიც დაკავშირებულია თქვენს ანგარიშთან.',
+    userIdLabel: 'მომხმარებლის ID',
+    detailsLabel: 'დეტალები',
+    rawTitle: 'იდენტიტეტები',
+    rawHeading: 'იდენტიტეტების ნედლი მონაცემები',
   },
   
   // Organizations tab
@@ -100,6 +148,13 @@ export const kaGE: Translations = {
     orgRoles: 'ორგანიზაციის როლები',
     noOrganizations: 'არ არის ორგანიზაციის წევრი',
     noRoles: 'ორგანიზაციის როლები არ არის მინიჭებული',
+    description: 'ორგანიზაციები, რომლებსაც თქვენ ეკუთვნით.',
+    rolesDescription: 'თქვენი როლები ორგანიზაციებში.',
+    idLabel: 'ID',
+    organizationLabel: 'ორგანიზაცია',
+    roleIdLabel: 'როლის ID',
+    rawTitle: 'ორგანიზაციები & ორგანიზაციის როლები',
+    rawHeading: 'ორგანიზაციების ნედლი მონაცემები',
   },
   
   // MFA tab
@@ -133,12 +188,31 @@ export const kaGE: Translations = {
     remove: '[წაშლა]',
     created: 'შექმნილი',
     lastUsed: 'ბოლოს გამოყენებული',
+    passwordRequired: 'პაროლი საჭიროა',
+    backupCodesGenerated: 'სარეზერვო კოდები გენერირებულია! შეინახეთ ისინი ახლა - ისინი აღარ გამოჩნდება.',
+    factorRemoved: 'MFA ფაქტორი წარმატებით წაიშალა',
+    missingVerification: 'ვერიფიკაციის კოდი აკლია ან სესია ვადაგასულა',
+    totpEnrolled: 'TOTP წარმატებით დარეგისტრირდა',
+    backupCodesDownloaded: 'სარეზერვო კოდები ჩამოტვირთულია',
+    backupCodesDownloadedHtml: 'სარეზერვო კოდები ჩამოტვირთულია HTML-ში',
+    enterPasswordPlaceholder: 'შეიყვანეთ პაროლი',
+    enterCodePlaceholder: '000000',
+    updateFailed: 'MFA-ს განახლება ვერ მოხერხდა',
+    loadFailed: 'MFA-ს ჩატვირთვა ვერ მოხერხდა',
+    verificationFailed: 'ვერიფიკაცია ვერ მოხერხდა',
+    totpVerificationFailed: 'TOTP ვერიფიკაცია ვერ მოხერხდა',
+    confirmRemoveFactor: 'წაშალოთ ${mfa.type} MFA ფაქტორი?',
+    verifyPasswordToRemoveFactor: 'დაადასტურეთ პაროლი MFA ფაქტორის წასაშლელად',
+    verifyPasswordToGenerateTotp: 'დაადასტურეთ პაროლი TOTP საიდუმლოს გენერაციისთვის',
+    verifyPasswordToGenerateBackupCodes: 'დაადასტურეთ პაროლი სარეზერვო კოდების გენერაციისთვის',
+    verifyPasswordToViewBackupCodes: 'დაადასტურეთ პაროლი სარეზერვო კოდების სანახავად',
   },
   
   // Raw tab
   raw: {
     title: 'RAW',
-    rawUserData: 'RAW მომხმარებლის მონაცემები',
+    rawUserData: 'მომხმარებლის ნედლი მონაცემები',
+    dataTitle: 'მომხმარებლის მონაცემები',
   },
   
   // Common
@@ -150,6 +224,8 @@ export const kaGE: Translations = {
     error: '[შეცდომა]',
     loading: '[...]',
     retry: '[თავიდან ცდა]',
+    notAvailable: 'N/A',
+    invalidDate: 'არასწორი თარიღი',
   },
 };
 
