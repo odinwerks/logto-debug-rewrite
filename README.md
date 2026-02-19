@@ -62,13 +62,7 @@ A modular Next.js debug dashboard for Logto authentication with comprehensive us
 │   └── page.tsx
 ├── .env
 ├── .env.example
-├── AGENTS.md
-├── README.md
-├── Todo.md
-├── layout.md
 ├── middleware.ts
-├── next-env.d.ts
-├── next.config.ts
 ├── package-lock.json
 ├── package.json
 └── tsconfig.json
