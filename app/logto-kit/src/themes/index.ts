@@ -1,18 +1,15 @@
 // ============================================================================
-// Theme System - ENV-based Theme Loading
-// ============================================================================
-// Usage:
-//   THEME=default (or NEXT_THEME=default) - loads themes/default folder
-//   If not set, falls back to 'default'
+// Theme System
+// Selects the active theme folder from ENV and exports ThemeColors objects.
 //
-// Each theme folder should contain:
-//   - dark.css (dark theme variables)
-//   - light.css (light theme variables)
-//   - index.ts (optional theme metadata)
+// ENV:
+//   THEME (or NEXT_PUBLIC_THEME) = folder name under ./themes/  (default: 'default')
+//   DEFAULT_THEME_MODE (or NEXT_PUBLIC_DEFAULT_THEME_MODE) = 'dark' | 'light'
 // ============================================================================
 
-import { existsSync } from 'fs';
-import { join } from 'path';
+// ─────────────────────────────────────────────────────────────────────────────
+// ThemeColors interface
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface ThemeColors {
   // Backgrounds
@@ -20,98 +17,135 @@ export interface ThemeColors {
   bgPrimary: string;
   bgSecondary: string;
   bgTertiary: string;
+
   // Text
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
-  // Border
+
+  // Borders
   borderColor: string;
+
   // Accents
   accentGreen: string;
-  accentYellow: string;
   accentRed: string;
+  accentYellow: string;
   accentBlue: string;
-  // Status backgrounds
+
+  // Status backgrounds (for toasts etc.)
   successBg: string;
   errorBg: string;
   warningBg: string;
-  // Font weight (differs between dark/light)
-  fontWeight: string;
+
+  // Misc
+  fontWeight: number | string;
 }
 
-// Dark theme colors (OG style)
-export const darkColors: ThemeColors = {
-  bgPage: '#0a0a0a',
-  bgPrimary: '#050505',
-  bgSecondary: '#0a0a0a',
-  bgTertiary: '#1a1a1a',
-  borderColor: '#374151',
-  textPrimary: '#d1d5db',
-  textSecondary: '#9ca3af',
-  textTertiary: '#6b7280',
-  accentGreen: '#86efac',
-  accentYellow: '#fbbf24',
-  accentRed: '#ef4444',
-  accentBlue: '#60a5fa',
-  successBg: '#003300',
-  errorBg: '#330000',
-  warningBg: '#78350f',
-  fontWeight: 'normal',
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// ENV helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Light theme colors (OG style)
-export const lightColors: ThemeColors = {
-  bgPage: '#e8eaed',
-  bgPrimary: '#ffffff',
-  bgSecondary: '#dadcde',
-  bgTertiary: '#c0c2c4',
-  borderColor: '#7a7c7e',
-  textPrimary: '#050505',
-  textSecondary: '#333333',
-  textTertiary: '#555555',
-  accentGreen: '#059669',
-  accentYellow: '#d97706',
-  accentRed: '#dc2626',
-  accentBlue: '#2563eb',
-  successBg: '#ecfdf5',
-  errorBg: '#fef2f2',
-  warningBg: '#fffbdc',
-  fontWeight: '500',
-};
+function readEnv(name: string): string | undefined {
+  if (typeof process !== 'undefined' && process.env) {
+    return (
+      process.env[name] ||
+      process.env[`NEXT_PUBLIC_${name}`] ||
+      undefined
+    );
+  }
+  return undefined;
+}
 
 /**
- * Get theme name from environment variables
- * Priority: THEME > NEXT_THEME > 'default'
+ * Returns the active theme folder name from ENV.
+ * Defaults to 'default'.
  */
 export function getThemeName(): string {
-  const themeName = process.env.THEME || process.env.NEXT_THEME || 'default';
-  // Sanitize: only allow alphanumeric, hyphens, underscores
-  return themeName.replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
+  return (readEnv('THEME') || 'default').trim();
 }
 
 /**
- * Get available themes from environment
- * LANG_AVAILABLE and NEXT_LANG_AVAILABLE should be comma-separated list
+ * Returns the default theme mode ('dark' or 'light').
+ * Source: DEFAULT_THEME_MODE or NEXT_PUBLIC_DEFAULT_THEME_MODE
+ * Falls back to 'dark'.
  */
-export function getAvailableThemes(): string[] {
-  const available = process.env.THEMES_AVAILABLE || process.env.NEXT_THEMES_AVAILABLE || 'default';
-  return available.split(',').map(t => t.trim()).filter(Boolean);
+export function getDefaultThemeMode(): 'dark' | 'light' {
+  const raw = (readEnv('DEFAULT_THEME_MODE') || 'dark').trim().toLowerCase();
+  return raw === 'light' ? 'light' : 'dark';
 }
 
-/**
- * Check if a theme exists
- */
-export function themeExists(themeName: string): boolean {
-  const available = getAvailableThemes();
-  return available.includes(themeName);
+// ─────────────────────────────────────────────────────────────────────────────
+// Theme definitions
+// Add new theme objects here when creating new theme folders.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── DEFAULT DARK ────────────────────────────────────────────────────────────
+const defaultDarkColors: ThemeColors = {
+  bgPage: '#050505',
+  bgPrimary: '#0a0a0a',
+  bgSecondary: '#111111',
+  bgTertiary: '#1a1a1a',
+
+  textPrimary: '#e5e7eb',
+  textSecondary: '#9ca3af',
+  textTertiary: '#6b7280',
+
+  borderColor: '#1f2937',
+
+  accentGreen: '#10b981',
+  accentRed: '#ef4444',
+  accentYellow: '#f59e0b',
+  accentBlue: '#3b82f6',
+
+  successBg: '#064e3b',
+  errorBg: '#450a0a',
+  warningBg: '#451a03',
+
+  fontWeight: 400,
+};
+
+// ── DEFAULT LIGHT ────────────────────────────────────────────────────────────
+const defaultLightColors: ThemeColors = {
+  bgPage: '#f9fafb',
+  bgPrimary: '#ffffff',
+  bgSecondary: '#f3f4f6',
+  bgTertiary: '#e5e7eb',
+
+  textPrimary: '#111827',
+  textSecondary: '#374151',
+  textTertiary: '#6b7280',
+
+  borderColor: '#d1d5db',
+
+  accentGreen: '#059669',
+  accentRed: '#dc2626',
+  accentYellow: '#d97706',
+  accentBlue: '#2563eb',
+
+  successBg: '#d1fae5',
+  errorBg: '#fee2e2',
+  warningBg: '#fef3c7',
+
+  fontWeight: 500,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Theme selection
+// ─────────────────────────────────────────────────────────────────────────────
+
+function resolveThemeColors(
+  themeName: string
+): { dark: ThemeColors; light: ThemeColors } {
+  switch (themeName) {
+    // Add new themes here:
+    // case 'midnight':
+    //   return { dark: midnightDarkColors, light: midnightLightColors };
+    case 'default':
+    default:
+      return { dark: defaultDarkColors, light: defaultLightColors };
+  }
 }
 
-/**
- * Get CSS import path for a theme's variant (dark/light)
- */
-export function getThemeCssPath(themeName: string, variant: 'dark' | 'light'): string {
-  return `/logto-kit/src/themes/${themeName}/${variant}.css`;
-}
+const { dark: darkColors, light: lightColors } = resolveThemeColors(getThemeName());
 
-// Re-export for convenience
-export { darkColors as darkTheme, lightColors as lightTheme };
+export { darkColors, lightColors };
