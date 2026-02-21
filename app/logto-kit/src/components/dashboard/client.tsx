@@ -26,7 +26,97 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tab metadata (labels come from translations, so this only holds the ID)
+// Helper: getInitials
+// ─────────────────────────────────────────────────────────────────────────────
+const getInitials = (data: UserData): string => {
+  if (!data) return '?';
+  if (data.profile?.givenName && data.profile?.familyName) {
+    return `${data.profile.givenName[0]}${data.profile.familyName[0]}`.toUpperCase();
+  }
+  if (data.name) {
+    const parts = data.name.split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return parts[0][0]?.toUpperCase() || '?';
+  }
+  if (data.username) return data.username[0]?.toUpperCase() || '?';
+  return '?';
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Component: UserBadge
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface UserBadgeProps {
+  /** Forces 'Avatar' or 'Initials'. Defaults to 'Initials' or auto-detects based on URL validity. */
+  Canvas?: 'Avatar' | 'Initials';
+  /** Size of the circle (width & height). Defaults to '6.25rem' (100px). */
+  Size?: string;
+  /** Border radius. Defaults to '50%'. */
+  Border?: string;
+  userData: UserData;
+  themeColors: ThemeColors;
+}
+
+function UserBadge({
+  Canvas,
+  Size = '6.25rem', // 100px converted to rem
+  Border = '50%',
+  userData,
+  themeColors,
+}: UserBadgeProps) {
+  // State to handle image load errors instantly
+  const [imageFailed, setImageFailed] = useState(false);
+
+  let mode: 'Avatar' | 'Initials';
+
+  if (Canvas === 'Avatar' || Canvas === 'Initials') {
+    mode = Canvas;
+  } else {
+    mode = 'Initials';
+  }
+
+  // If mode is Avatar, but image fails to load, we switch to Initials for UI stability
+  const isShowingAvatar = mode === 'Avatar' && userData.avatar && !imageFailed;
+
+  // Calculate font size: (Circle Size) * (36 / 100)
+  // We use calc() to handle the 'rem' or 'px' units dynamically in CSS
+  const fontSizeStyle = `calc(${Size} * 0.36)`;
+
+  const containerStyle: React.CSSProperties = {
+    width: Size,
+    height: Size,
+    borderRadius: Border,
+    border: `2px solid ${themeColors.borderColor}`,
+    background: isShowingAvatar ? 'transparent' : themeColors.bgTertiary,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    color: themeColors.textTertiary,
+    fontSize: fontSizeStyle, // Apply calculated font size
+  };
+
+  // Render Initials
+  if (!isShowingAvatar) {
+    return <div style={containerStyle}>{getInitials(userData)}</div>;
+  }
+
+  // Render Avatar
+  return (
+    <div style={containerStyle}>
+      <img
+        src={userData.avatar}
+        alt="Avatar"
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        // Instant switch to initials if fetch fails
+        onError={() => setImageFailed(true)}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab metadata
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TAB_ICON = '›';
@@ -50,15 +140,10 @@ function getTabLabel(id: TabId, t: Translations): string {
 interface DashboardClientProps {
   initialData: DashboardData;
   translations: Translations;
-  /** All translations keyed by locale code, for client-side lang switching */
   allTranslations: Record<string, Translations>;
-  /** Ordered list of supported language codes from ENV */
   supportedLangs: string[];
-  /** Current default language code from ENV */
   initialLang: string;
-  /** Ordered list of tab IDs to display from ENV */
   loadedTabs: TabId[];
-  /** Default theme mode from ENV */
   initialTheme?: 'dark' | 'light';
 
   onUpdateBasicInfo: (updates: { name?: string; username?: string }) => Promise<void>;
@@ -132,7 +217,6 @@ export function DashboardClient({
   const [userData, setUserData] = useState<UserData>(initialData.userData);
   const [accessToken, setAccessToken] = useState<string>(initialData.accessToken);
 
-  // Sync local state when parent component provides fresh data
   useEffect(() => {
     setUserData(initialData.userData);
     setAccessToken(initialData.accessToken);
@@ -165,7 +249,6 @@ export function DashboardClient({
     setIsRefreshing(true);
     try {
       await onRefresh();
-      // Parent component will re-render with fresh data, updating initialData prop
     } catch {
       showToast('error', t.dashboard.refreshFailed);
     } finally {
@@ -174,29 +257,15 @@ export function DashboardClient({
   }, [onRefresh, showToast, t]);
 
   // ── Preferences persistence ────────────────────────────────────────────────
-  // Track whether we've done the initial preference sync
   const prefSyncedRef = useRef(false);
-
-  // Always-current refs — so persistPreferences never captures stale state.
-  // userDataRef: holds current user data so other keys are preserved on PATCH.
-  // themeRef / langRef: track the latest React state values without closure issues.
   const userDataRef = useRef(userData);
   userDataRef.current = userData;
 
   const themeRef = useRef<'dark' | 'light'>(initialTheme);
   const langRef = useRef<string>(initialLang);
-  // Sync on every render — before any hooks that read them.
   themeRef.current = theme;
   langRef.current = lang;
 
-  /**
-   * Write preferences to Logto customData — fire-and-forget.
-   *
-   * ALWAYS sends the complete { theme, lang } object.
-   * Any field not in `updates` is filled from the current ref value, NOT from
-   * stale userData. This prevents a partial update (only theme, or only lang)
-   * from silently wiping the other preference to its default.
-   */
   const persistPreferences = useCallback(
     async (updates: Partial<{ theme: 'dark' | 'light'; lang: string }>) => {
       const complete = {
@@ -213,7 +282,6 @@ export function DashboardClient({
     [onUpdateCustomData]
   );
 
-  // ── Mount: read preferences from customData ────────────────────────────────
   useEffect(() => {
     if (prefSyncedRef.current) return;
     prefSyncedRef.current = true;
@@ -221,7 +289,6 @@ export function DashboardClient({
     const prefs = getPreferencesFromUserData(userData);
 
     if (prefs) {
-      // Apply saved preferences
       let shouldPersist = false;
 
       if (prefs.theme && prefs.theme !== initialTheme) {
@@ -232,30 +299,24 @@ export function DashboardClient({
         setLang(prefs.lang);
       }
 
-      // If lang in prefs is not in supported list, normalise it
       if (prefs.lang && !supportedLangs.includes(prefs.lang)) {
         shouldPersist = true;
       }
 
-      // If we need to correct stale/invalid prefs, overwrite
       if (shouldPersist) {
         persistPreferences({ theme: prefs.theme, lang: supportedLangs[0] });
       }
     } else {
-      // No preferences yet — write the current defaults
       persistPreferences({ theme: initialTheme, lang: initialLang });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Theme toggle ───────────────────────────────────────────────────────────
   const toggleTheme = useCallback(() => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     persistPreferences({ theme: next });
   }, [theme, persistPreferences]);
-
-
 
   // ── Sign out ───────────────────────────────────────────────────────────────
   const handleSignOut = useCallback(async () => {
@@ -267,20 +328,6 @@ export function DashboardClient({
   }, [onSignOut, showToast, t]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  const getInitials = useCallback((data: UserData): string => {
-    if (!data) return '?';
-    if (data.profile?.givenName && data.profile?.familyName) {
-      return `${data.profile.givenName[0]}${data.profile.familyName[0]}`.toUpperCase();
-    }
-    if (data.name) {
-      const parts = data.name.split(' ');
-      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-      return parts[0][0]?.toUpperCase() || '?';
-    }
-    if (data.username) return data.username[0]?.toUpperCase() || '?';
-    return '?';
-  }, []);
-
   const formatDate = useCallback((timestamp?: number | string) => {
     if (!timestamp) return t.common.notAvailable;
     try {
@@ -302,12 +349,10 @@ export function DashboardClient({
     } catch {
       return t.common.invalidDate;
     }
-  }, []);
+  }, [t]);
 
   const isJwt = accessToken.split('.').length === 3;
   const tokenPrefix = isJwt ? 'JWT' : 'OPAQUE';
-
-  // ── Multiple langs available? ──────────────────────────────────────────────
   const hasMultipleLangs = supportedLangs.length > 1;
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -418,50 +463,19 @@ export function DashboardClient({
             </div>
 
             <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '14px' }}>
-              {/* Initials fallback */}
-              <div
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '50%',
-                  border: `2px solid ${themeColors.borderColor}`,
-                  background: themeColors.bgTertiary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '36px',
-                  color: themeColors.textTertiary,
-                }}
-              >
-                {getInitials(userData)}
-              </div>
+              {/* Forced to Initials */}
+              <UserBadge
+                Canvas="Initials"
+                userData={userData}
+                themeColors={themeColors}
+              />
 
-              {/* Actual avatar */}
-              <div
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '50%',
-                  border: `2px solid ${themeColors.borderColor}`,
-                  background: userData.avatar ? 'transparent' : themeColors.bgTertiary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                }}
-              >
-                {userData.avatar ? (
-                  <img
-                    src={userData.avatar}
-                    alt="Avatar"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ fontSize: '14px', color: themeColors.textTertiary, textAlign: 'center', whiteSpace: 'pre-line' }}>
-                    {t.sidebar.noAvatar}
-                  </div>
-                )}
-              </div>
+              {/* Forced to Avatar */}
+              <UserBadge
+                Canvas="Avatar"
+                userData={userData}
+                themeColors={themeColors}
+              />
             </div>
 
             <div style={{ color: themeColors.textTertiary, fontSize: '10px', wordBreak: 'break-all', marginBottom: '10px', textAlign: 'center' }}>
@@ -594,8 +608,6 @@ export function DashboardClient({
             >
               {theme === 'dark' ? t.sidebar.lightMode : t.sidebar.darkMode}
             </button>
-
-
 
             {/* Sign out */}
             <button
