@@ -39,6 +39,7 @@ export function ProfileTab({
   themeColors,
   t,
   onUpdateBasicInfo,
+  onUpdateAvatarUrl,
   onUpdateProfile,
   onVerifyPassword,
   onSendEmailVerification,
@@ -53,9 +54,11 @@ export function ProfileTab({
   refreshData,
 }: ProfileTabProps) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  
   const [editGivenName, setEditGivenName] = useState(userData.profile?.givenName || '');
   const [editFamilyName, setEditFamilyName] = useState(userData.profile?.familyName || '');
   const [editUsername, setEditUsername] = useState(userData.username || '');
+  const [editAvatarUrl, setEditAvatarUrl] = useState(userData.avatar || '');
 
   const [verificationState, setVerificationState] = useState<VerificationState>({
     type: null,
@@ -64,6 +67,7 @@ export function ProfileTab({
     verificationId: null,
     newValue: '',
   });
+  
   const [verificationCode, setVerificationCode] = useState('');
   const [passwordForVerification, setPasswordForVerification] = useState('');
   const [identityVerificationId, setIdentityVerificationId] = useState<string | null>(null);
@@ -96,7 +100,7 @@ export function ProfileTab({
     setPasswordForVerification('');
     setVerificationCode('');
     setIdentityVerificationId(null);
-  }, [userData.primaryEmail]);
+  }, [userData.primaryEmail, t]);
 
   const handleRemovePhone = useCallback(async () => {
     if (!userData.primaryPhone) return;
@@ -112,7 +116,7 @@ export function ProfileTab({
     setPasswordForVerification('');
     setVerificationCode('');
     setIdentityVerificationId(null);
-  }, [userData.primaryPhone]);
+  }, [userData.primaryPhone, t]);
 
   const handleVerifyPassword = useCallback(async () => {
     if (!passwordForVerification) {
@@ -208,6 +212,7 @@ export function ProfileTab({
     onSuccess,
     onError,
     refreshData,
+    t,
   ]);
 
   const cancelVerification = useCallback(() => {
@@ -235,6 +240,11 @@ export function ProfileTab({
         await onUpdateBasicInfo(basicInfoUpdates);
       }
 
+      // Update Avatar URL separately if changed
+      if (editAvatarUrl !== userData?.avatar) {
+        await onUpdateAvatarUrl(editAvatarUrl);
+      }
+
       await onUpdateProfile({
         givenName: editGivenName,
         familyName: editFamilyName,
@@ -252,13 +262,46 @@ export function ProfileTab({
     editGivenName,
     editFamilyName,
     editUsername,
+    editAvatarUrl,
     userData,
     onUpdateBasicInfo,
+    onUpdateAvatarUrl,
     onUpdateProfile,
     onSuccess,
     onError,
     refreshData,
+    t,
   ]);
+
+  const inputStyle = {
+    width: '100%',
+    padding: '8px',
+    background: themeColors.bgPrimary,
+    border: `1px solid ${themeColors.borderColor}`,
+    borderRadius: '4px',
+    color: themeColors.textPrimary,
+    fontSize: '12px',
+    fontFamily: 'var(--font-ibm-plex-mono)',
+    boxSizing: 'border-box' as const,
+  };
+
+  const labelStyle = {
+    display: 'block',
+    color: themeColors.textSecondary,
+    fontSize: '11px',
+    marginBottom: '6px',
+  };
+
+  const buttonStyle = {
+    padding: '8px 12px',
+    background: themeColors.bgTertiary,
+    color: themeColors.textPrimary,
+    border: `1px solid ${themeColors.borderColor}`,
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '11px',
+    fontFamily: 'var(--font-ibm-plex-mono)',
+  };
 
   return (
     <div>
@@ -285,18 +328,14 @@ export function ProfileTab({
             t={t}
           />
           <button
-            onClick={() => setIsEditingProfile(true)}
-            style={{
-              marginTop: '12px',
-              padding: '8px 16px',
-              background: themeColors.bgTertiary,
-              color: themeColors.textPrimary,
-              border: `1px solid ${themeColors.borderColor}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '11px',
-              fontFamily: 'var(--font-ibm-plex-mono)',
+            onClick={() => {
+              setEditGivenName(userData.profile?.givenName || '');
+              setEditFamilyName(userData.profile?.familyName || '');
+              setEditUsername(userData.username || '');
+              setEditAvatarUrl(userData.avatar || '');
+              setIsEditingProfile(true);
             }}
+            style={{ ...buttonStyle, marginTop: '12px' }}
           >
             {t.profile.editProfile}
           </button>
@@ -317,104 +356,53 @@ export function ProfileTab({
           {/* Given Name & Family Name */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: themeColors.textSecondary,
-                  fontSize: '11px',
-                  marginBottom: '6px',
-                }}
-              >
-                {t.profile.givenName}
-              </label>
+              <label style={labelStyle}>{t.profile.givenName}</label>
               <input
                 type="text"
                 value={editGivenName}
                 onChange={(e) => setEditGivenName(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  background: themeColors.bgPrimary,
-                  border: `1px solid ${themeColors.borderColor}`,
-                  borderRadius: '4px',
-                  color: themeColors.textPrimary,
-                  fontSize: '12px',
-                  fontFamily: 'var(--font-ibm-plex-mono)',
-                }}
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: themeColors.textSecondary,
-                  fontSize: '11px',
-                  marginBottom: '6px',
-                }}
-              >
-                {t.profile.familyName}
-              </label>
+              <label style={labelStyle}>{t.profile.familyName}</label>
               <input
                 type="text"
                 value={editFamilyName}
                 onChange={(e) => setEditFamilyName(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  background: themeColors.bgPrimary,
-                  border: `1px solid ${themeColors.borderColor}`,
-                  borderRadius: '4px',
-                  color: themeColors.textPrimary,
-                  fontSize: '12px',
-                  fontFamily: 'var(--font-ibm-plex-mono)',
-                }}
+                style={inputStyle}
               />
             </div>
           </div>
 
           {/* Username */}
           <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                color: themeColors.textSecondary,
-                fontSize: '11px',
-                marginBottom: '6px',
-              }}
-            >
-              {t.profile.username}
-            </label>
+            <label style={labelStyle}>{t.profile.username}</label>
             <input
               type="text"
               value={editUsername}
               onChange={(e) => setEditUsername(e.target.value)}
               placeholder={t.profile.usernamePlaceholder}
-              style={{
-                width: '100%',
-                padding: '8px',
-                background: themeColors.bgPrimary,
-                border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '4px',
-                color: themeColors.textPrimary,
-                fontSize: '12px',
-                fontFamily: 'var(--font-ibm-plex-mono)',
-              }}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Avatar URL */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>{t.profile.avatarUrl || 'Avatar URL'}</label>
+            <input
+              type="text"
+              value={editAvatarUrl}
+              onChange={(e) => setEditAvatarUrl(e.target.value)}
+              placeholder="https://example.com/avatar.png"
+              style={inputStyle}
             />
           </div>
 
           {/* Email Field */}
           <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                color: themeColors.textSecondary,
-                fontSize: '11px',
-                marginBottom: '6px',
-              }}
-            >
-              {t.profile.email}
-            </label>
+            <label style={labelStyle}>{t.profile.email}</label>
 
             {verificationState.type === 'email' ? (
               <div>
@@ -428,15 +416,9 @@ export function ProfileTab({
                     placeholder={t.profile.emailPlaceholder}
                     disabled={verificationState.step === 'code'}
                     style={{
+                      ...inputStyle,
                       flex: '2',
-                      padding: '8px',
-                      background:
-                        verificationState.step === 'code' ? themeColors.bgTertiary : themeColors.bgPrimary,
-                      border: `1px solid ${themeColors.borderColor}`,
-                      borderRadius: '4px',
-                      color: themeColors.textPrimary,
-                      fontSize: '12px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
+                      background: verificationState.step === 'code' ? themeColors.bgTertiary : themeColors.bgPrimary,
                     }}
                   />
 
@@ -446,16 +428,7 @@ export function ProfileTab({
                       value={passwordForVerification}
                       onChange={(e) => setPasswordForVerification(e.target.value)}
                       placeholder={t.verification.password}
-                      style={{
-                        flex: '1',
-                        padding: '8px',
-                        background: themeColors.bgPrimary,
-                        border: `1px solid ${themeColors.borderColor}`,
-                        borderRadius: '4px',
-                        color: themeColors.textPrimary,
-                        fontSize: '12px',
-                        fontFamily: 'var(--font-ibm-plex-mono)',
-                      }}
+                      style={{ ...inputStyle, flex: '1' }}
                     />
                   ) : (
                     <input
@@ -463,16 +436,7 @@ export function ProfileTab({
                       value={verificationCode}
                       onChange={(e) => setVerificationCode(e.target.value)}
                       placeholder={t.verification.verificationCode}
-                      style={{
-                        flex: '1',
-                        padding: '8px',
-                        background: themeColors.bgPrimary,
-                        border: `1px solid ${themeColors.borderColor}`,
-                        borderRadius: '4px',
-                        color: themeColors.textPrimary,
-                        fontSize: '12px',
-                        fontFamily: 'var(--font-ibm-plex-mono)',
-                      }}
+                      style={{ ...inputStyle, flex: '1' }}
                     />
                   )}
 
@@ -480,14 +444,10 @@ export function ProfileTab({
                     onClick={verificationState.step === 'code' ? handleVerifyCodeAndUpdate : handleVerifyPassword}
                     disabled={isLoading}
                     style={{
-                      padding: '8px 12px',
+                      ...buttonStyle,
                       background: themeColors.accentYellow,
                       color: '#000',
                       border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
                     }}
                   >
                     {isLoading
@@ -500,16 +460,7 @@ export function ProfileTab({
                   <button
                     onClick={cancelVerification}
                     disabled={isLoading}
-                    style={{
-                      padding: '8px 12px',
-                      background: themeColors.bgTertiary,
-                      color: themeColors.textPrimary,
-                      border: `1px solid ${themeColors.borderColor}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
-                    }}
+                    style={buttonStyle}
                   >
                     {t.profile.cancel}
                   </button>
@@ -536,30 +487,17 @@ export function ProfileTab({
                   <>
                     <button
                       onClick={() => startVerification('email', userData.primaryEmail)}
-                      style={{
-                        padding: '8px 12px',
-                        background: themeColors.bgTertiary,
-                        color: themeColors.textPrimary,
-                        border: `1px solid ${themeColors.borderColor}`,
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        fontFamily: 'var(--font-ibm-plex-mono)',
-                      }}
+                      style={buttonStyle}
                     >
                       {t.profile.edit}
                     </button>
                     <button
                       onClick={handleRemoveEmail}
                       style={{
-                        padding: '8px 12px',
+                        ...buttonStyle,
                         background: themeColors.accentRed,
                         color: '#fee2e2',
                         border: `1px solid ${themeColors.accentRed}`,
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        fontFamily: 'var(--font-ibm-plex-mono)',
                       }}
                     >
                       {t.profile.remove}
@@ -568,16 +506,7 @@ export function ProfileTab({
                 ) : (
                   <button
                     onClick={() => startVerification('email')}
-                    style={{
-                      padding: '8px 12px',
-                      background: themeColors.bgTertiary,
-                      color: themeColors.textPrimary,
-                      border: `1px solid ${themeColors.borderColor}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
-                    }}
+                    style={buttonStyle}
                   >
                     {t.profile.add}
                   </button>
@@ -588,16 +517,7 @@ export function ProfileTab({
 
           {/* Phone Field */}
           <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                color: themeColors.textSecondary,
-                fontSize: '11px',
-                marginBottom: '6px',
-              }}
-            >
-              {t.profile.phone}
-            </label>
+            <label style={labelStyle}>{t.profile.phone}</label>
 
             {verificationState.type === 'phone' ? (
               <div>
@@ -611,15 +531,9 @@ export function ProfileTab({
                     placeholder={t.profile.phonePlaceholder}
                     disabled={verificationState.step === 'code'}
                     style={{
+                      ...inputStyle,
                       flex: '2',
-                      padding: '8px',
-                      background:
-                        verificationState.step === 'code' ? themeColors.bgTertiary : themeColors.bgPrimary,
-                      border: `1px solid ${themeColors.borderColor}`,
-                      borderRadius: '4px',
-                      color: themeColors.textPrimary,
-                      fontSize: '12px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
+                      background: verificationState.step === 'code' ? themeColors.bgTertiary : themeColors.bgPrimary,
                     }}
                   />
 
@@ -629,16 +543,7 @@ export function ProfileTab({
                       value={passwordForVerification}
                       onChange={(e) => setPasswordForVerification(e.target.value)}
                       placeholder={t.verification.password}
-                      style={{
-                        flex: '1',
-                        padding: '8px',
-                        background: themeColors.bgPrimary,
-                        border: `1px solid ${themeColors.borderColor}`,
-                        borderRadius: '4px',
-                        color: themeColors.textPrimary,
-                        fontSize: '12px',
-                        fontFamily: 'var(--font-ibm-plex-mono)',
-                      }}
+                      style={{ ...inputStyle, flex: '1' }}
                     />
                   ) : (
                     <input
@@ -646,16 +551,7 @@ export function ProfileTab({
                       value={verificationCode}
                       onChange={(e) => setVerificationCode(e.target.value)}
                       placeholder={t.verification.verificationCode}
-                      style={{
-                        flex: '1',
-                        padding: '8px',
-                        background: themeColors.bgPrimary,
-                        border: `1px solid ${themeColors.borderColor}`,
-                        borderRadius: '4px',
-                        color: themeColors.textPrimary,
-                        fontSize: '12px',
-                        fontFamily: 'var(--font-ibm-plex-mono)',
-                      }}
+                      style={{ ...inputStyle, flex: '1' }}
                     />
                   )}
 
@@ -663,14 +559,10 @@ export function ProfileTab({
                     onClick={verificationState.step === 'code' ? handleVerifyCodeAndUpdate : handleVerifyPassword}
                     disabled={isLoading}
                     style={{
-                      padding: '8px 12px',
+                      ...buttonStyle,
                       background: themeColors.accentYellow,
                       color: '#000',
                       border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
                     }}
                   >
                     {isLoading
@@ -683,16 +575,7 @@ export function ProfileTab({
                   <button
                     onClick={cancelVerification}
                     disabled={isLoading}
-                    style={{
-                      padding: '8px 12px',
-                      background: themeColors.bgTertiary,
-                      color: themeColors.textPrimary,
-                      border: `1px solid ${themeColors.borderColor}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
-                    }}
+                    style={buttonStyle}
                   >
                     {t.profile.cancel}
                   </button>
@@ -717,16 +600,7 @@ export function ProfileTab({
 
                 <button
                   onClick={() => startVerification('phone', userData.primaryPhone || '')}
-                  style={{
-                    padding: '8px 12px',
-                    background: themeColors.bgTertiary,
-                    color: themeColors.textPrimary,
-                    border: `1px solid ${themeColors.borderColor}`,
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    fontFamily: 'var(--font-ibm-plex-mono)',
-                  }}
+                  style={buttonStyle}
                 >
                   {userData.primaryPhone ? t.profile.edit : t.profile.add}
                 </button>
@@ -735,14 +609,10 @@ export function ProfileTab({
                   <button
                     onClick={handleRemovePhone}
                     style={{
-                      padding: '8px 12px',
+                      ...buttonStyle,
                       background: themeColors.accentRed,
                       color: '#fee2e2',
                       border: `1px solid ${themeColors.accentRed}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-ibm-plex-mono)',
                     }}
                   >
                     {t.profile.remove}
@@ -777,16 +647,7 @@ export function ProfileTab({
                 cancelVerification();
               }}
               disabled={isLoading}
-              style={{
-                padding: '10px 16px',
-                background: themeColors.bgTertiary,
-                color: themeColors.textPrimary,
-                border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '4px',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                fontFamily: 'var(--font-ibm-plex-mono)',
-              }}
+              style={buttonStyle}
             >
               {t.profile.cancel}
             </button>
