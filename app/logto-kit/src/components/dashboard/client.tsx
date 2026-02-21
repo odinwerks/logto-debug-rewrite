@@ -15,6 +15,7 @@ import { IdentitiesTab } from './tabs/identities';
 import { OrganizationsTab } from './tabs/organizations';
 import { RawDataTab } from './tabs/raw-data';
 import { getPreferencesFromUserData, buildUpdatedCustomData } from '../../logic/preferences';
+import { UserBadge } from '../userbutton';
 
 // Import MfaVerification type
 import type { MfaVerification } from '../../logic/types';
@@ -24,96 +25,6 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ['400', '500', '600'],
   variable: '--font-ibm-plex-mono',
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: getInitials
-// ─────────────────────────────────────────────────────────────────────────────
-const getInitials = (data: UserData): string => {
-  if (!data) return '?';
-  if (data.profile?.givenName && data.profile?.familyName) {
-    return `${data.profile.givenName[0]}${data.profile.familyName[0]}`.toUpperCase();
-  }
-  if (data.name) {
-    const parts = data.name.split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return parts[0][0]?.toUpperCase() || '?';
-  }
-  if (data.username) return data.username[0]?.toUpperCase() || '?';
-  return '?';
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Component: UserBadge
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface UserBadgeProps {
-  /** Forces 'Avatar' or 'Initials'. Defaults to 'Initials' or auto-detects based on URL validity. */
-  Canvas?: 'Avatar' | 'Initials';
-  /** Size of the circle (width & height). Defaults to '6.25rem' (100px). */
-  Size?: string;
-  /** Border radius. Defaults to '50%'. */
-  Border?: string;
-  userData: UserData;
-  themeColors: ThemeColors;
-}
-
-function UserBadge({
-  Canvas,
-  Size = '6.25rem', // 100px converted to rem
-  Border = '50%',
-  userData,
-  themeColors,
-}: UserBadgeProps) {
-  // State to handle image load errors instantly
-  const [imageFailed, setImageFailed] = useState(false);
-
-  let mode: 'Avatar' | 'Initials';
-
-  if (Canvas === 'Avatar' || Canvas === 'Initials') {
-    mode = Canvas;
-  } else {
-    mode = 'Initials';
-  }
-
-  // If mode is Avatar, but image fails to load, we switch to Initials for UI stability
-  const isShowingAvatar = mode === 'Avatar' && userData.avatar && !imageFailed;
-
-  // Calculate font size: (Circle Size) * (36 / 100)
-  // We use calc() to handle the 'rem' or 'px' units dynamically in CSS
-  const fontSizeStyle = `calc(${Size} * 0.36)`;
-
-  const containerStyle: React.CSSProperties = {
-    width: Size,
-    height: Size,
-    borderRadius: Border,
-    border: `2px solid ${themeColors.borderColor}`,
-    background: isShowingAvatar ? 'transparent' : themeColors.bgTertiary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    color: themeColors.textTertiary,
-    fontSize: fontSizeStyle, // Apply calculated font size
-  };
-
-  // Render Initials
-  if (!isShowingAvatar) {
-    return <div style={containerStyle}>{getInitials(userData)}</div>;
-  }
-
-  // Render Avatar
-  return (
-    <div style={containerStyle}>
-      <img
-        src={userData.avatar}
-        alt="Avatar"
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        // Instant switch to initials if fetch fails
-        onError={() => setImageFailed(true)}
-      />
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab metadata
