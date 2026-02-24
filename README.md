@@ -11,6 +11,7 @@ A modular Next.js debug dashboard for Logto authentication with comprehensive us
 - **i18n Support**: Multi-language support with ENV-configured locale availability and ordering
 - **MFA Management**: TOTP enrollment, backup codes generation, and WebAuthn support
 - **User Preferences**: Automatic persistence of theme and language choices in Logto customData
+- **Auto-Refresh on Preference Change**: When theme or language is changed, tabs (profile, custom-data, raw) automatically refresh to display the latest data from the server
 - **Tab Configuration**: Select which tabs to display and their order via ENV variable
 - **Cookie Recovery**: Automatic handling of stale cookie contexts with cookie-killer utility
 - **Translation-First Validation**: All validation messages use translation strings for full i18n coverage

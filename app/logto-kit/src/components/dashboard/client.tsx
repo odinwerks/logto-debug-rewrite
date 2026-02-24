@@ -223,11 +223,12 @@ export function DashboardClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = useCallback(async () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    persistPreferences({ theme: next });
-  }, [theme, persistPreferences]);
+    await persistPreferences({ theme: next });
+    await onRefresh();
+  }, [theme, persistPreferences, onRefresh]);
 
   // ── Sign out ───────────────────────────────────────────────────────────────
   const handleSignOut = useCallback(async () => {
@@ -455,10 +456,11 @@ export function DashboardClient({
                 {supportedLangs.map((code) => (
                   <div
                     key={code}
-                    onClick={() => {
+                    onClick={async () => {
                       if (code !== lang) {
                         setLang(code);
-                        persistPreferences({ lang: code });
+                        await persistPreferences({ lang: code });
+                        await onRefresh();
                       }
                     }}
                     style={{
