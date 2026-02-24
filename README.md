@@ -240,10 +240,7 @@ npm run build
 
 ## Todo
 
-I need to add a workable, multi-state, multi-function user button. Once this is fully polished, repackage the logto-kit folder as a components library, enabling Logto usage in a way similar to Clerk (a great and wasy to use SaaS but I am too broke).
+I need to add a workable, multi-state, multi-function user button. Once this is fully polished, repackage the logto-kit folder as a components library, enabling Logto usage in a way similar to Clerk (a great and easyto use SaaS but I am too broke).
 
 ## License
-
-None do whatever 
-
-> **Disclaimer**: If you cause the decadence of Earth running this horrid code, I am not liable. Also take care <3
+If you cause the decadence of Earth running this horrid code, I am not liable. Also take care <3
