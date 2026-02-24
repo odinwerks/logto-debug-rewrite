@@ -10,15 +10,15 @@
   },
   "dependencies": {
     "@logto/next": "^4.2.6",
-    "next": "^15.5.9",
+    "next": "^16.1.6",
     "qrcode.react": "^4.2.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/react": "^18.2.56",
-    "@types/react-dom": "^18.2.19",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "typescript": "^5.3.3"
   }
 }

@@ -2,6 +2,8 @@
 
 A modular Next.js debug dashboard for Logto authentication with comprehensive user profile management, featuring a terminal/hacker aesthetic.
 
+> **Next.js 16 Ready** - Code is ready for Next.js 16. Build and dev server pass. (Logto middleware uses edge runtime - will show deprecation warning until Logto adds proxy.ts support)
+
 ## Features
 
 - **Terminal/Hacker Aesthetic**: OG styling with bracketed buttons, monospace fonts, and dark/light themes
